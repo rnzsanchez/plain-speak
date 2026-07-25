@@ -1,5 +1,12 @@
 # A/B results
 
+## v1 (historical)
+
+Produced by `ab.sh`, which has been replaced by `bench/run.mjs`. Kept because the
+output-length finding still stands and the cost flaw is worth remembering: every
+prompt ran in a fresh session, so cache-creation tokens swamped the difference.
+The new harness runs real multi-turn sessions instead.
+
 Run: `./ab.sh` — 10 prompts, each asked twice (rules off, rules on).
 Model: Opus 5 (1M context). Date: 2026-07-25. Fresh headless session per prompt, cwd `/tmp`.
 
