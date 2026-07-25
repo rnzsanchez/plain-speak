@@ -1,23 +1,16 @@
 ---
 name: plain-speak
-description: Show the active plain-speak mode and how to change it.
+description: Turn plain-speak on, switch mode, or show where it stands.
 disable-model-invocation: true
+argument-hint: "[off | normal | cte]"
 allowed-tools: Bash
 ---
 
-Run this:
+Run this and show the output exactly as printed, with no commentary:
 
 ```sh
-node "$HOME/.claude/plain-speak/bin/cli.js" mode
+node "$(ls "$CLAUDE_PLUGIN_ROOT/bin/cli.js" "$HOME/.claude/plain-speak/bin/cli.js" 2>/dev/null | head -1)" status $ARGUMENTS
 ```
 
-Then show the user the current mode and this table, with no other commentary:
-
-| Command | Voice |
-|---|---|
-| `/plain-speak-mode off` | Nothing injected, nothing checked. |
-| `/plain-speak-mode normal` | The base. Plain voice, answer first, full thoughts fine, no fuss. |
-| `/plain-speak-mode cte` | Caveman, turned to twelve. Short. Blunt. Fragments. |
-
-Also mention: `/plain-speak-stats` for token and drift numbers, `/plain-speak-doctor`
-to check the install.
+With no argument it turns plain-speak on if it was off, then reports the mode. With
+`off`, `normal` or `cte` it switches. A switch applies from the next message onward.

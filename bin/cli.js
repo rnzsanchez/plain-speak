@@ -11,14 +11,16 @@ const codex = require('../src/install/codex');
 
 const USAGE = `plain-speak — terse-response modes with an active hygiene checker
 
-  plain-speak install [--claude] [--codex]   wire up hooks, badge and /plain-speak-stats
+  plain-speak install [--claude] [--codex]   wire up hooks and slash commands
+  plain-speak install --statusline           also chain the badge onto your statusline
   plain-speak uninstall                      remove everything it added
+  plain-speak status [mode]                  show status, or switch mode
   plain-speak mode [off|normal|cte]          show or set the mode ("max" = cte)
   plain-speak badge                          print the statusline badge
   plain-speak stats [--session-file <path>]  token and drift report
   plain-speak doctor                         check the install
 
-Modes: off (nothing) · normal (plain voice, the base) · cte (caveman, at twelve)
+Modes: off (nothing) · normal (plain voice, the base) · cte (blunt, at twelve)
 `;
 
 function arg(flag) {
@@ -33,7 +35,7 @@ function main() {
   switch (cmd) {
     case 'install': {
       const both = !has('--claude') && !has('--codex');
-      if (both || has('--claude')) claude.install();
+      if (both || has('--claude')) claude.install({ chainStatusline: has('--statusline') });
       if (both || has('--codex')) codex.install();
       if (!state.readSafe(state.modePath())) state.writeMode('normal');
       console.log(`\nMode: ${state.readMode()}. Change it in a session: /plain-speak-mode cte`);
@@ -46,6 +48,21 @@ function main() {
       codex.uninstall();
       return;
 
+    // What /plain-speak runs. No argument: turn it on if it was off, then show
+    // where things stand. With an argument: switch mode.
+    case 'status': {
+      const wanted = process.argv[3];
+      let mode = state.readMode();
+      if (wanted) mode = state.writeMode(wanted);
+      else if (mode === 'off') mode = state.writeMode('normal');
+      console.log(`plain-speak — ${mode}${mode === 'cte' ? ' 🧠' : ''}\n`);
+      console.log('  /plain-speak off       nothing injected, nothing checked');
+      console.log('  /plain-speak normal    plain voice, answer first, no fuss');
+      console.log('  /plain-speak cte       same voice at twelve — short, blunt');
+      console.log('  /plain-speak-stats     token and drift report');
+      return;
+    }
+
     case 'mode': {
       const next = process.argv[3];
       if (!next) return console.log(state.readMode());
@@ -54,7 +71,7 @@ function main() {
     }
 
     case 'badge': {
-      const script = path.join(__dirname, '..', 'src', 'statusline.sh');
+      const script = path.join(__dirname, '..', 'src', 'plain-speak-statusline.sh');
       const r = spawnSync('bash', [script], { stdio: 'inherit' });
       process.exit(r.status || 0);
     }

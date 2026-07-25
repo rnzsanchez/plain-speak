@@ -20,7 +20,7 @@ const {
 const settingsPath = () => path.join(state.claudeDir(), 'settings.json');
 const skillsDir = () => path.join(state.claudeDir(), 'skills');
 
-function install() {
+function install({ chainStatusline = false } = {}) {
   const dir = copyRuntime();
   const settings = readJson(settingsPath(), {});
   settings.hooks = settings.hooks || {};
@@ -46,14 +46,23 @@ function install() {
     settings.hooks[event] = [...kept, { hooks: [{ type: 'command', command }] }];
   }
 
-  const badge = `bash "${path.join(dir, 'src', 'statusline.sh')}"`;
+  // Your statusline is yours. If one is already configured we do not touch it —
+  // rearranging someone's status bar is not this installer's business. Pass
+  // --statusline to chain the badge on anyway, or place `badge` wherever your own
+  // statusline wants it.
+  const badge = `bash "${path.join(dir, 'src', 'plain-speak-statusline.sh')}"`;
   const existing = settings.statusLine && settings.statusLine.command;
+  let badgeNote;
   if (!existing) {
     settings.statusLine = { type: 'command', command: badge };
-  } else if (!existing.includes('plain-speak')) {
-    // Prepend, so the badge sits at the front of the first line and the user's
-    // own statusline keeps rendering untouched.
+    badgeNote = 'badge installed as your statusline';
+  } else if (existing.includes('plain-speak')) {
+    badgeNote = 'badge already in your statusline';
+  } else if (chainStatusline) {
     settings.statusLine = { type: 'command', command: `${badge}; ${existing}` };
+    badgeNote = 'badge prepended to your existing statusline';
+  } else {
+    badgeNote = `statusline left alone — add it yourself with: ${badge}`;
   }
 
   writeJson(settingsPath(), settings);
@@ -62,6 +71,7 @@ function install() {
 
   console.log(`Claude Code: hooks + badge wired, runtime at ${dir}`);
   console.log(`  commands: ${skills.map((s) => `/${s}`).join(' ')}`);
+  console.log(`  ${badgeNote}`);
   console.log(`  settings backed up to ${settingsPath()}.plain-speak-backup`);
   for (const entry of removed) console.log(`  removed superseded hook — ${entry}`);
 }
@@ -103,8 +113,8 @@ function doctor() {
     console.log(`  ${wired ? 'ok  ' : 'MISS'} ${event}`);
   }
   const cmd = (settings.statusLine && settings.statusLine.command) || '';
-  console.log(`  ${cmd.includes('plain-speak') ? 'ok  ' : 'MISS'} statusline badge`);
-  for (const name of ['plain-speak', 'plain-speak-mode', 'plain-speak-stats', 'plain-speak-doctor']) {
+  console.log(`  ${cmd.includes('plain-speak') ? 'ok  ' : 'none'} statusline badge`);
+  for (const name of ['plain-speak', 'plain-speak-stats']) {
     const there = fs.existsSync(path.join(skillsDir(), name, 'SKILL.md'));
     console.log(`  ${there ? 'ok  ' : 'MISS'} /${name}`);
   }
