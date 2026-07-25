@@ -32,6 +32,10 @@ a single stray word never trips `normal`.
 Tables, lists, headings and quotes are the formats the rules ask for. They are not
 counted as prose, and their sentence length is not measured.
 
+**Naming a phrase is not using it.** Inline code and quoted lines are removed before
+the marker scan, so a reply that says the checker catches `utilize`, or that quotes
+someone else's fussy sentence, is not penalised for it.
+
 Only walls count as paragraphs. Counting every prose block made `cte` flag replies
 as short as "Done."
 
@@ -54,21 +58,23 @@ is ever stored.
 On a trip, the next prompt carries the rules back plus a one-line reason — as
 suppressed context, so it reaches the model and not your screen.
 
-| Guard | Value |
-|---|---|
-| Back-to-back reinjections | never — one turn must pass |
-| Clean reply | nothing to correct, so nothing is injected |
-| Hard ceiling | none by default |
+There is deliberately **no cap.** A cap that runs out stops correcting a model that is
+still drifting, which is the opposite of the point. Instead it crosses a threshold and
+eases off:
 
-There is deliberately **no cap per session.** A cap that runs out stops correcting a
-model that is still drifting, which is the opposite of the point. The cooldown is
-what keeps it from nagging: at worst it costs one injection every other turn, and
-only while the replies keep failing.
+| | First 3 corrections | After that |
+|---|---|---|
+| Wait between corrections | 1 turn | 4 turns |
+| What gets sent | the mode's full rules (~200 tok) | a one-line nudge (~30 tok) |
 
-If you want a ceiling anyway:
+Repeated drift usually means the context has grown large — and answering a big context
+with yet more context is the wrong move, so it backs off rather than escalating.
+
+A clean reply means there is nothing to correct, so nothing is sent at all.
 
 ```sh
-PLAIN_SPEAK_MAX_RETRIES=3 claude   # stop after three, then leave it alone
+PLAIN_SPEAK_BACKOFF_AFTER=1 claude   # ease off almost immediately
+PLAIN_SPEAK_MAX_RETRIES=3 claude     # a hard ceiling instead
 ```
 
 ## Where it can be wrong
@@ -82,4 +88,4 @@ positive costs you one reinjection, not a run of them.
 
 The thresholds and word lists are plain data at the top of
 [`src/drift.js`](../src/drift.js). Edit, then `npm test` — the unit tests cover
-every threshold, every exemption and the budget.
+every threshold, every exemption, and the backoff.

@@ -19,13 +19,20 @@ const codexHome = () => process.env.CODEX_HOME || path.join(os.homedir(), '.code
 const hooksPath = () => path.join(codexHome(), 'hooks.json');
 const configPath = () => path.join(codexHome(), 'config.toml');
 
+// Scoped to the [features] table. A bare /hooks = true/ search would match the key in
+// somebody else's table and skip the edit, leaving hooks quietly disabled.
+function featureEnabled(toml) {
+  const section = toml.split(/^\[/m).find((s) => s.startsWith('features]'));
+  return Boolean(section && /^\s*hooks\s*=\s*true/m.test(section));
+}
+
 function enableHooksFeature() {
   const file = configPath();
   let toml = '';
   try {
     toml = fs.readFileSync(file, 'utf8');
   } catch {}
-  if (/^\s*hooks\s*=\s*true/m.test(toml)) return false;
+  if (featureEnabled(toml)) return false;
 
   if (/^\[features\]/m.test(toml)) {
     toml = toml.replace(/^\[features\]/m, '[features]\nhooks = true');
@@ -97,7 +104,7 @@ function doctor() {
   try {
     toml = fs.readFileSync(configPath(), 'utf8');
   } catch {}
-  console.log(`  ${/^\s*hooks\s*=\s*true/m.test(toml) ? 'ok  ' : 'MISS'} [features] hooks`);
+  console.log(`  ${featureEnabled(toml) ? 'ok  ' : 'MISS'} [features] hooks`);
 }
 
 module.exports = { install, uninstall, doctor };

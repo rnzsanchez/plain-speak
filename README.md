@@ -115,9 +115,10 @@ Each hit is a point, and the mode's threshold decides when the points mean drift
 It stands down when the output was *meant* to be long — you asked for detail, a
 walkthrough, a plan or a doc; the reply is mostly code; the turn was a plan.
 
-And it will not nag: never two reinjections in a row, and a clean reply means nothing
-to inject. There is no per-session cap — a cap that runs out would stop correcting a
-model that is still drifting.
+And it will not nag. There is no cap — a cap that runs out would stop correcting a
+model that is still drifting — but there is a threshold. Past it, corrections come
+four turns apart and shrink to a one-line nudge, because repeated drift usually means
+the context is already big and more context is not the fix.
 
 → **[Signals, thresholds, exemptions, tuning](./docs/checker.md)**
 
@@ -131,7 +132,7 @@ plain-speak — cte
 This session
   holding      ████████░░  83%   5 of 6 turns clean
   reinjections 2
-  output       4,180 tokens over 12 replies · 348 each
+  output       4,180 tokens over 12 messages · 348 each
   saved        ██░░░░░░░░  18%   ~918 tokens vs rules off
   last drift   filler: "certainly"; corporate word: "leverage"
 

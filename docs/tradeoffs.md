@@ -6,22 +6,29 @@ The honest list.
 
 | Downside | Detail |
 |---|---|
-| It adds to your settings | Only with the npx installer: three hook entries in `~/.claude/settings.json` and `~/.codex/hooks.json`. A `.plain-speak-backup` is written first; `uninstall` restores them. The plugin route edits nothing at all. |
-| Three node processes per turn | Roughly 40–60 ms each. Invisible next to a model call, but not zero. |
+| It adds to your settings | Only with the npx installer: three hook entries in `~/.claude/settings.json` and `~/.codex/hooks.json`. A `.plain-speak-backup` of the original is written the first time it touches them; `uninstall` reverses the edits. The plugin route edits nothing at all. |
+| Two node processes per turn | `UserPromptSubmit` and `Stop`, roughly 40–60 ms each, plus one more at session start. Invisible next to a model call, but not zero. |
 | The badge runs constantly | The statusline re-renders as you type. That is why it is bash and reads one small file. |
 | The checker is a heuristic | It will sometimes miss a fussy reply, sometimes flag one that needed a long sentence. See [the checker](./checker.md#where-it-can-be-wrong). |
 | Terser is not always better | A short answer can drop context you wanted. `cte` especially. Use `normal`, or ask for detail and the checker stands down. |
 | The mode is global | One setting across every project and session. |
-| Reinjection is uncapped | By design. On a model that keeps drifting it costs roughly one injection every other turn. `PLAIN_SPEAK_MAX_RETRIES` puts a ceiling back. |
+| Reinjection is uncapped | By design, but it eases off. The first few corrections land on the next turn; after that it waits four turns and sends a one-line nudge instead of the ruleset. `PLAIN_SPEAK_MAX_RETRIES` puts a hard ceiling back. |
 | Codex asks for trust | Hooks must be trusted on first run. The installer does not bypass that prompt for you. |
 | Node 18+ on `PATH` | No dependencies, but the hooks need node. |
 | Uninstall keeps your data | Mode and `state.json` stay. Delete `~/.claude/plain-speak/` to be rid of them. |
 
 ## Privacy
 
-Counters only: turn counts, drift trips, reinjections, and a per-session
-`lengthRequested` boolean. **No prompt text and no reply text is ever written to
-disk.** The last 50 sessions are kept; older entries are pruned.
+`~/.claude/plain-speak/state.json` holds counters — turns, drift trips, reinjections, a
+`lengthRequested` boolean — and the reason for the last drift.
+
+**No prompt text is ever written to disk.** The drift reason is drawn from a closed
+vocabulary: which of plain-speak's own marker phrases matched, plus counts such as
+"a 34-word sentence". So it can record that the word *certainly* appeared, because
+*certainly* is on plain-speak's list — it never records arbitrary wording from your
+prompt or from the reply.
+
+The last 50 sessions are kept; older entries are pruned.
 
 ## Living with your other tools
 

@@ -60,6 +60,21 @@ test('a mode switch is the one thing the user sees', () => {
   assert.equal(fs.readFileSync(path.join(env.CLAUDE_CONFIG_DIR, 'plain-speak', 'mode'), 'utf8'), 'normal');
 });
 
+test('mentioning a mode does not switch it', () => {
+  const env = sandbox();
+  const out = hook(
+    'prompt-submit.js',
+    { session_id: 's', user_prompt: 'what does plain-speak off actually do?' },
+    env
+  );
+  assert.equal(out, '', 'a question about the command is not the command');
+  assert.equal(
+    fs.readFileSync(path.join(env.CLAUDE_CONFIG_DIR, 'plain-speak', 'mode'), 'utf8'),
+    'cte',
+    'mode untouched'
+  );
+});
+
 test('mode off silences everything', () => {
   const env = sandbox();
   fs.writeFileSync(path.join(env.CLAUDE_CONFIG_DIR, 'plain-speak', 'mode'), 'off');

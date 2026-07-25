@@ -10,7 +10,6 @@ const state = require('./state');
 // roughly threefold — dedupe on message.id.
 function fromTranscript(file) {
   const totals = {
-    turns: 0,
     replies: 0,
     outputTokens: 0,
     inputTokens: 0,
@@ -32,14 +31,6 @@ function fromTranscript(file) {
     try {
       row = JSON.parse(line);
     } catch {
-      continue;
-    }
-
-    if (row.type === 'user') {
-      const content = row.message && row.message.content;
-      const isToolResult =
-        Array.isArray(content) && content.some((c) => c && c.type === 'tool_result');
-      if (!isToolResult) totals.turns += 1;
       continue;
     }
 
@@ -100,8 +91,6 @@ function report({ sessionId, transcriptPath } = {}) {
     mode,
     session: {
       ...session,
-      injectionsIncludingSessionStart: session.injections + 1,
-      injectedTokensEstimate: (session.injections + 1) * perInjection,
       transcript,
       outputPerReply:
         transcript && transcript.replies
@@ -132,7 +121,7 @@ function format(r) {
     out.push(
       'This session',
       `  holding      ${bar(clean)}  ${Math.round(clean * 100)}%   ${s.turns - s.trips} of ${s.turns} checked turns clean`,
-      `  reinjections ${n(s.injections)}${state.MAX_RETRIES === Infinity ? '' : ` of ${state.MAX_RETRIES} allowed`}`
+      `  reinjections ${n(s.injections)}${state.easedOff(s) ? ' — eased off, correcting less often' : ''}`
     );
   } else {
     out.push('This session', '  no turns recorded yet');
@@ -143,7 +132,7 @@ function format(r) {
     // whole transcript, which includes every tool-call reply. Different scopes, so
     // they are labelled differently rather than stacked as if they matched.
     out.push(
-      `  output       ${n(t.outputTokens)} tokens over ${n(t.replies)} replies · ${n(s.outputPerReply)} each`
+      `  output       ${n(t.outputTokens)} tokens over ${n(t.replies)} messages · ${n(s.outputPerReply)} each`
     );
     const win = savingsFor(t.model, r.mode);
     if (win) {

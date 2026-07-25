@@ -13,7 +13,7 @@ benchmark proves the cost.
 ## Commands
 
 ```sh
-npm test                          # node --test, drift + budget unit tests
+npm test                          # node --test, drift + backoff unit tests
 node bin/cli.js doctor            # is the local install wired (no slash command — deliberate)
 node bin/cli.js stats             # report for the most recent session
 node bench/run.mjs --dry-run      # benchmark plan, no API calls
@@ -57,6 +57,11 @@ on Codex.
   roughly threefold.
 - **`lastInjectTurn` is the completed-turn count at injection time**, so the
   cooldown compares against `turns - 1`. Off-by-one here means it nags every turn.
+- **Inline code and quoted lines are stripped before the marker scan.** Without that,
+  any reply *about* writing style trips the checker — including the ones you write
+  while working on this repo. Shape checks still run on the full prose.
+- **The mode-switch regex is anchored to the whole prompt.** Unanchored, "what does
+  plain-speak off do?" silently switched the mode.
 - **Only walls count as prose paragraphs** (2+ sentences and 25+ words). Counting
   every prose block made `cte` flag replies as short as "Done."
 - **Skill directory name and frontmatter `name` must match.** `copySkills()` renames

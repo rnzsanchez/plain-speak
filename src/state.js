@@ -9,12 +9,21 @@ const os = require('os');
 
 const MODES = ['off', 'normal', 'cte'];
 const ALIASES = { max: 'cte', on: 'normal', default: 'normal' };
-// No cap by default. A cap that runs out stops correcting a model that is still
-// drifting, which is the opposite of the point. The one-turn cooldown is what keeps
-// it from nagging; set PLAIN_SPEAK_MAX_RETRIES to put a hard ceiling back.
+// No cap: one that runs out stops correcting a model that is still drifting. Instead
+// there is a threshold. Under it, correct on the next turn. Over it, back right off —
+// wait several turns and send a one-line nudge instead of the whole ruleset. Repeated
+// drift usually means the context has grown large, and hammering a big context with
+// more context is the wrong answer.
+const BACKOFF_AFTER = Number(process.env.PLAIN_SPEAK_BACKOFF_AFTER || 3);
+const COOLDOWN_TURNS = 1;
+const EASED_COOLDOWN_TURNS = 4;
 const MAX_RETRIES = process.env.PLAIN_SPEAK_MAX_RETRIES
   ? Number(process.env.PLAIN_SPEAK_MAX_RETRIES)
   : Infinity;
+
+// Past the threshold plain-speak stops being aggressive: longer gap, shorter nudge.
+const easedOff = (session) => session.injections >= BACKOFF_AFTER;
+const cooldownFor = (session) => (easedOff(session) ? EASED_COOLDOWN_TURNS : COOLDOWN_TURNS);
 const KEEP_SESSIONS = 50;
 
 function claudeDir() {
@@ -124,28 +133,32 @@ function saveSession(id, session, store = readStore()) {
   store.sessions[key] = { ...session, updatedAt: Date.now() };
   if (isNew) {
     store.sessions[key].startedAt = session.startedAt || Date.now();
-    store.lifetime.sessions += 1;
+    if (!isBenchmark()) store.lifetime.sessions += 1;
   }
   writeStore(store);
   return store;
 }
 
+// A benchmark spawns dozens of throwaway sessions with the hooks live, which is the
+// point — but folding them into lifetime stats would make the numbers meaningless.
+const isBenchmark = () => process.env.PLAIN_SPEAK_BENCH === '1';
+
 function bumpLifetime(store, patch) {
+  if (isBenchmark()) return store;
   for (const [k, v] of Object.entries(patch)) {
     store.lifetime[k] = (store.lifetime[k] || 0) + v;
   }
   return store;
 }
 
-// Drift alone is not enough to reinject. The budget stops it nagging; the
-// cooldown stops two reinjections landing back to back.
+// Drift alone is not enough to reinject. The cooldown stops two corrections landing
+// back to back, and widens once the threshold is crossed.
 function shouldReinject(session, maxRetries = MAX_RETRIES) {
   if (!session.drift) return false;
   if (session.injections >= maxRetries) return false;
-  // lastInjectTurn is the completed-turn count at the moment we injected, so
-  // turns - 1 means the injection landed on the turn that just finished.
-  if (session.lastInjectTurn >= session.turns - 1) return false;
-  return true;
+  // lastInjectTurn is the completed-turn count at the moment we injected, so a gap of
+  // 1 means the injection landed on the turn that just finished.
+  return session.turns - session.lastInjectTurn > cooldownFor(session);
 }
 
 // Called from the Stop hook once per turn with the drift verdict.
@@ -167,6 +180,9 @@ function recordTurn(session, verdict) {
 module.exports = {
   MODES,
   MAX_RETRIES,
+  BACKOFF_AFTER,
+  easedOff,
+  cooldownFor,
   claudeDir,
   homeDir,
   modePath,
@@ -179,6 +195,7 @@ module.exports = {
   readSession,
   saveSession,
   bumpLifetime,
+  isBenchmark,
   shouldReinject,
   recordTurn,
   writeSafe,

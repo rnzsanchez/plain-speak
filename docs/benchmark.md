@@ -1,5 +1,7 @@
 # Measuring it
 
+Run these from a clone, or from the plugin's install directory — both carry `bench/`.
+
 ```sh
 node bench/run.mjs --dry-run                            # plan and cost, zero calls
 node bench/run.mjs --models claude-haiku-4-5 --turns 3  # cheap real run
@@ -37,7 +39,11 @@ output-length column is not.
 | `--dry-run` | show the plan and exit |
 
 The mode flag is global, so a run temporarily changes your live setting and puts it
-back on exit — including on Ctrl-C.
+back on exit — including on Ctrl-C, though not if the process is killed outright.
+
+Benchmark sessions run with the hooks live, because that is exactly what is being
+measured, but they set `PLAIN_SPEAK_BENCH=1` so their dozens of throwaway sessions
+stay out of your lifetime stats.
 
 ## What gets recorded
 

@@ -42,10 +42,18 @@ const prompts = fs
   .filter(Boolean)
   .slice(0, turns);
 
+// Hooks stay live in the child — they are the thing under test — but this flag keeps
+// the throwaway sessions out of the user's lifetime stats.
+const BENCH_ENV = { ...process.env, PLAIN_SPEAK_BENCH: '1' };
+
 function runClaude(prompt, model, sessionId) {
   const args = ['-p', prompt, '--model', model, '--output-format', 'json'];
   if (sessionId) args.push('--resume', sessionId);
-  const r = spawnSync('claude', args, { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
+  const r = spawnSync('claude', args, {
+    encoding: 'utf8',
+    maxBuffer: 64 * 1024 * 1024,
+    env: BENCH_ENV,
+  });
   const json = JSON.parse(r.stdout);
   const u = json.usage || {};
   return {
@@ -62,7 +70,11 @@ function runCodex(prompt, model, started) {
   const args = started
     ? ['exec', 'resume', '--last', '--json', '-m', model, prompt]
     : ['exec', '--json', '-m', model, prompt];
-  const r = spawnSync('codex', args, { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
+  const r = spawnSync('codex', args, {
+    encoding: 'utf8',
+    maxBuffer: 64 * 1024 * 1024,
+    env: BENCH_ENV,
+  });
   // Last token_count event of the turn carries that turn's usage.
   let last = null;
   for (const line of (r.stdout || '').split('\n')) {

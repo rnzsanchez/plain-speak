@@ -4,7 +4,7 @@ import { createRequire } from 'node:module';
 
 const require = createRequire(import.meta.url);
 const { check } = require('../src/drift.js');
-const { shouldReinject, recordTurn } = require('../src/state.js');
+const { shouldReinject, recordTurn, easedOff, cooldownFor } = require('../src/state.js');
 
 const NORMAL_GOOD = `Yes. The index is on \`user_id\`.
 
@@ -73,6 +73,22 @@ test('tables and lists are not prose paragraphs', () => {
   assert.equal(check({ reply, mode: 'cte' }).drift, false);
 });
 
+test('naming a marker phrase is not using it', () => {
+  const talkingAbout = [
+    'The checker catches `leverage`, `utilize` and `it is important to note`.',
+    '',
+    '> Certainly! I would be happy to help with that.',
+    '',
+    'That is the whole list.',
+  ].join('\n');
+  assert.equal(check({ reply: talkingAbout, mode: 'normal' }).drift, false);
+
+  // …but actually writing that way still trips.
+  const usingThem =
+    'Certainly! We should leverage this and it is important to note the tradeoff.';
+  assert.equal(check({ reply: usingThem, mode: 'normal' }).drift, true);
+});
+
 test('the cooldown stops two reinjections landing back to back', () => {
   let s = recordTurn({ turns: 0, trips: 0, injections: 0, lastInjectTurn: -1, cleanStreak: 0 }, {
     drift: true,
@@ -98,8 +114,21 @@ test('a clean turn stops it, drift starts it again — no cap to run out', () =>
   assert.equal(shouldReinject(s), true, 'still corrects after many injections');
 });
 
+test('past the threshold it eases off instead of stopping', () => {
+  const base = { trips: 9, injections: 3, lastInjectTurn: 6, cleanStreak: 0, drift: true };
+  assert.equal(easedOff(base), true);
+  assert.equal(cooldownFor(base), 4, 'gap widens once eased off');
+
+  // Under the old one-turn cooldown this would have injected; now it waits.
+  assert.equal(shouldReinject({ ...base, turns: 8 }), false);
+  assert.equal(shouldReinject({ ...base, turns: 9 }), false);
+  // Four turns after the last correction it speaks up again — it never gives up.
+  assert.equal(shouldReinject({ ...base, turns: 11 }), true);
+  assert.equal(shouldReinject({ ...base, turns: 40, injections: 20 }), true);
+});
+
 test('an explicit ceiling is still honoured when asked for', () => {
-  const s = { turns: 9, trips: 4, injections: 3, lastInjectTurn: 6, cleanStreak: 0, drift: true };
-  assert.equal(shouldReinject(s, 3), false);
-  assert.equal(shouldReinject(s, 5), true);
+  const s = { turns: 20, trips: 4, injections: 3, lastInjectTurn: 6, cleanStreak: 0, drift: true };
+  assert.equal(shouldReinject(s, 3), false, 'ceiling reached');
+  assert.equal(shouldReinject(s, 5), true, 'below the ceiling, and past the wider cooldown');
 });

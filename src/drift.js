@@ -86,12 +86,21 @@ const MARKERS = [
 const LENGTH_REQUESTED =
   /\b(in detail|detailed|deep[- ]dive|walk ?through|step[- ]by[- ]step|comprehensive|verbose|elaborate|expand on|full (explanation|breakdown|write-?up)|explain why|teach me|write (me )?(a |an |the )?(plan|doc|document|report|readme|essay|guide|spec|summary))\b/i;
 
-// Fenced blocks only. Inline `code` stays prose — it's part of a sentence.
 const FENCE = /```[\s\S]*?(?:```|$)/g;
+const INLINE_CODE = /`[^`\n]*`/g;
+const QUOTED_LINE = /^\s*>.*$/gm;
 
 function splitFences(text) {
   const code = (text.match(FENCE) || []).join('\n');
   return { code, prose: text.replace(FENCE, '\n') };
+}
+
+// Naming a phrase is not using it. A reply that says the checker catches `utilize`,
+// or quotes someone else's fussy sentence, is behaving correctly — so inline code and
+// quoted lines are removed before the marker scan. Sentence and paragraph shape is
+// still measured on the full prose.
+function scannable(prose) {
+  return prose.replace(INLINE_CODE, ' ').replace(QUOTED_LINE, ' ');
 }
 
 const words = (s) => s.split(/\s+/).filter(Boolean);
@@ -140,7 +149,7 @@ function check({
   }
 
   const hits = [];
-  const lower = prose.toLowerCase();
+  const lower = scannable(prose).toLowerCase();
   for (const [label, list] of MARKERS) {
     for (const phrase of list) {
       if (lower.includes(phrase)) hits.push(`${label}: "${phrase}"`);

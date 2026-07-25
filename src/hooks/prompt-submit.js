@@ -8,8 +8,9 @@ const { run, rulesFor, inject, notify } = require('./lib');
 const state = require('../state');
 const { LENGTH_REQUESTED } = require('../drift');
 
-// Explicit switches only: "/plain-speak cte", "plain-speak off", "plain speak normal".
-const SWITCH = /(?:^|\s)\/?plain[-\s]?speak\s+(off|on|normal|cte|max|default)\b/i;
+// The whole prompt must be the command. Anchoring matters: without it, asking "what
+// does plain-speak off do?" would silently switch the mode mid-conversation.
+const SWITCH = /^\s*\/?plain[-\s]?speak\s+(off|on|normal|cte|max|default)\s*[.!]?\s*$/i;
 
 run(({ sessionId, prompt }) => {
   const store = state.readStore();
@@ -46,8 +47,15 @@ run(({ sessionId, prompt }) => {
   state.bumpLifetime(store, { injections: 1 });
   state.saveSession(sessionId, next, store);
 
+  // Once eased off, send a one-line nudge rather than the whole ruleset. If the model
+  // keeps drifting the context is probably already large, and more context is not the
+  // fix — a reminder costs ~30 tokens instead of ~200.
+  const body = state.easedOff(session)
+    ? `PLAIN-SPEAK reminder (${mode}): answer first, plain words, no filler, no wall of prose.`
+    : rulesFor(mode);
+
   inject(
     'UserPromptSubmit',
-    `PLAIN-SPEAK: last reply drifted — ${session.reason}. Back to ${mode}.\n\n${rulesFor(mode)}`
+    `PLAIN-SPEAK: last reply drifted — ${session.reason}. Back to ${mode}.\n\n${body}`
   );
 });
