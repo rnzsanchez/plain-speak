@@ -9,7 +9,9 @@ allowed-tools: Bash
 Run this and show the output exactly as printed, with no commentary:
 
 ```sh
-node "$(ls "$CLAUDE_PLUGIN_ROOT/bin/cli.js" "$HOME/.claude/plain-speak/bin/cli.js" 2>/dev/null | head -1)" status $ARGUMENTS
+CLI="$CLAUDE_PLUGIN_ROOT/bin/cli.js"
+[ -f "$CLI" ] || CLI="$HOME/.claude/plain-speak/bin/cli.js"
+node "$CLI" status $ARGUMENTS
 ```
 
 With no argument it turns plain-speak on if it was off, then reports the mode. With

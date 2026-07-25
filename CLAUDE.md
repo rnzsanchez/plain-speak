@@ -64,6 +64,12 @@ on Codex.
   plain-speak off do?" silently switched the mode.
 - **Only walls count as prose paragraphs** (2+ sentences and 25+ words). Counting
   every prose block made `cte` flag replies as short as "Done."
+- **Never resolve a path with `ls A B | head -1`.** `ls` sorts its output, so it
+  ignores the order you passed. That made the skills run a stale standalone runtime
+  instead of the installed plugin. Test candidates in order with `[ -f ... ]`.
+- **A leftover runtime at `~/.claude/plain-speak` can be older than the plugin.**
+  `uninstall --claude` keeps it on purpose because Codex hooks point at it, so
+  re-run `install --codex` after changing hook code or Codex keeps running old hooks.
 - **Skill directory name and frontmatter `name` must match.** `copySkills()` renames
   both together. Change one without the other and the command silently fails to load.
 - **The badge script must keep its `*-statusline.sh` name.** Statuslines that render
