@@ -12,6 +12,7 @@ The honest list.
 | The checker is a heuristic | It will sometimes miss a fussy reply, sometimes flag one that needed a long sentence. See [the checker](./checker.md#where-it-can-be-wrong). |
 | Terser is not always better | A short answer can drop context you wanted. `cte` especially. Use `normal`, or ask for detail and the checker stands down. |
 | The mode is global | One setting across every project and session. |
+| Reinjection is uncapped | By design. On a model that keeps drifting it costs roughly one injection every other turn. `PLAIN_SPEAK_MAX_RETRIES` puts a ceiling back. |
 | Codex asks for trust | Hooks must be trusted on first run. The installer does not bypass that prompt for you. |
 | Node 18+ on `PATH` | No dependencies, but the hooks need node. |
 | Uninstall keeps your data | Mode and `state.json` stay. Delete `~/.claude/plain-speak/` to be rid of them. |

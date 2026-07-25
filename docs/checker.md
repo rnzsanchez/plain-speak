@@ -56,12 +56,19 @@ suppressed context, so it reaches the model and not your screen.
 
 | Guard | Value |
 |---|---|
-| Reinjections per session | 3 |
-| Back-to-back reinjections | never |
-| Budget refill | after 2 clean turns in a row |
+| Back-to-back reinjections | never — one turn must pass |
+| Clean reply | nothing to correct, so nothing is injected |
+| Hard ceiling | none by default |
+
+There is deliberately **no cap per session.** A cap that runs out stops correcting a
+model that is still drifting, which is the opposite of the point. The cooldown is
+what keeps it from nagging: at worst it costs one injection every other turn, and
+only while the replies keep failing.
+
+If you want a ceiling anyway:
 
 ```sh
-PLAIN_SPEAK_MAX_RETRIES=1 claude   # stricter
+PLAIN_SPEAK_MAX_RETRIES=3 claude   # stop after three, then leave it alone
 ```
 
 ## Where it can be wrong

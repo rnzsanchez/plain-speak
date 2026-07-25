@@ -73,7 +73,7 @@ test('tables and lists are not prose paragraphs', () => {
   assert.equal(check({ reply, mode: 'cte' }).drift, false);
 });
 
-test('reinjection budget stops the nagging', () => {
+test('the cooldown stops two reinjections landing back to back', () => {
   let s = recordTurn({ turns: 0, trips: 0, injections: 0, lastInjectTurn: -1, cleanStreak: 0 }, {
     drift: true,
     reason: 'x',
@@ -82,21 +82,24 @@ test('reinjection budget stops the nagging', () => {
 
   // We inject now, so lastInjectTurn is the completed-turn count at this moment.
   s = { ...s, injections: 1, lastInjectTurn: s.turns };
-  // That turn finishes and drifts again — too soon, cooldown holds.
   s = recordTurn(s, { drift: true, reason: 'x' });
-  assert.equal(shouldReinject(s), false, 'no two reinjections back to back');
+  assert.equal(shouldReinject(s), false, 'too soon');
 
-  // One more turn passes.
   s = recordTurn(s, { drift: true, reason: 'x' });
   assert.equal(shouldReinject(s), true, 'a turn later it may inject again');
-
-  assert.equal(shouldReinject({ ...s, injections: 3 }), false, 'budget exhausted');
 });
 
-test('two clean turns refill the budget', () => {
-  let s = { turns: 5, trips: 2, injections: 3, lastInjectTurn: 4, cleanStreak: 0 };
+test('a clean turn stops it, drift starts it again — no cap to run out', () => {
+  let s = { turns: 9, trips: 4, injections: 4, lastInjectTurn: 6, cleanStreak: 0 };
   s = recordTurn(s, { drift: false });
-  assert.equal(s.injections, 3, 'one clean turn is not enough');
-  s = recordTurn(s, { drift: false });
-  assert.equal(s.injections, 0);
+  assert.equal(shouldReinject(s), false, 'clean reply, nothing to correct');
+
+  s = recordTurn(s, { drift: true, reason: 'x' });
+  assert.equal(shouldReinject(s), true, 'still corrects after many injections');
+});
+
+test('an explicit ceiling is still honoured when asked for', () => {
+  const s = { turns: 9, trips: 4, injections: 3, lastInjectTurn: 6, cleanStreak: 0, drift: true };
+  assert.equal(shouldReinject(s, 3), false);
+  assert.equal(shouldReinject(s, 5), true);
 });

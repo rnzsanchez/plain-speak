@@ -115,8 +115,9 @@ Each hit is a point, and the mode's threshold decides when the points mean drift
 It stands down when the output was *meant* to be long — you asked for detail, a
 walkthrough, a plan or a doc; the reply is mostly code; the turn was a plan.
 
-And it will not nag: three reinjections a session, never two in a row, and two clean
-turns give the budget back.
+And it will not nag: never two reinjections in a row, and a clean reply means nothing
+to inject. There is no per-session cap — a cap that runs out would stop correcting a
+model that is still drifting.
 
 → **[Signals, thresholds, exemptions, tuning](./docs/checker.md)**
 
@@ -129,8 +130,8 @@ plain-speak — cte
 
 This session
   holding      ████████░░  83%   5 of 6 turns clean
-  reinjections █░░░░░░░░░  1/3 budget used
-  replies      4,180 tokens · 348 per reply
+  reinjections 2
+  output       4,180 tokens over 12 replies · 348 each
   saved        ██░░░░░░░░  18%   ~918 tokens vs rules off
   last drift   filler: "certainly"; corporate word: "leverage"
 

@@ -131,15 +131,20 @@ function format(r) {
     const clean = (s.turns - s.trips) / s.turns;
     out.push(
       'This session',
-      `  holding      ${bar(clean)}  ${Math.round(clean * 100)}%   ${s.turns - s.trips} of ${s.turns} turns clean`,
-      `  reinjections ${bar(s.injections / state.MAX_RETRIES)}  ${s.injections}/${state.MAX_RETRIES} budget used`
+      `  holding      ${bar(clean)}  ${Math.round(clean * 100)}%   ${s.turns - s.trips} of ${s.turns} checked turns clean`,
+      `  reinjections ${n(s.injections)}${state.MAX_RETRIES === Infinity ? '' : ` of ${state.MAX_RETRIES} allowed`}`
     );
   } else {
     out.push('This session', '  no turns recorded yet');
   }
 
   if (t && t.replies) {
-    out.push(`  replies      ${n(t.outputTokens)} tokens · ${n(s.outputPerReply)} per reply`);
+    // Turn counts come from plain-speak's own counters; token counts come from the
+    // whole transcript, which includes every tool-call reply. Different scopes, so
+    // they are labelled differently rather than stacked as if they matched.
+    out.push(
+      `  output       ${n(t.outputTokens)} tokens over ${n(t.replies)} replies · ${n(s.outputPerReply)} each`
+    );
     const win = savingsFor(t.model, r.mode);
     if (win) {
       const cut = win.outputCutPct / 100;
@@ -147,6 +152,8 @@ function format(r) {
       out.push(
         `  saved        ${bar(cut)}  ${win.outputCutPct}%   ~${n(saved)} tokens vs rules off`
       );
+    } else {
+      out.push(`  saved        no benchmark yet for ${t.model || 'this model'}`);
     }
   }
   if (s.reason) out.push(`  last drift   ${s.reason}`);

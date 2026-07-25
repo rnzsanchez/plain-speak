@@ -9,7 +9,12 @@ const os = require('os');
 
 const MODES = ['off', 'normal', 'cte'];
 const ALIASES = { max: 'cte', on: 'normal', default: 'normal' };
-const MAX_RETRIES = Number(process.env.PLAIN_SPEAK_MAX_RETRIES || 3);
+// No cap by default. A cap that runs out stops correcting a model that is still
+// drifting, which is the opposite of the point. The one-turn cooldown is what keeps
+// it from nagging; set PLAIN_SPEAK_MAX_RETRIES to put a hard ceiling back.
+const MAX_RETRIES = process.env.PLAIN_SPEAK_MAX_RETRIES
+  ? Number(process.env.PLAIN_SPEAK_MAX_RETRIES)
+  : Infinity;
 const KEEP_SESSIONS = 50;
 
 function claudeDir() {
@@ -155,8 +160,6 @@ function recordTurn(session, verdict) {
     next.drift = false;
     next.reason = null;
     next.cleanStreak = session.cleanStreak + 1;
-    // Two clean turns in a row means the model is behaving — refill the budget.
-    if (next.cleanStreak >= 2) next.injections = 0;
   }
   return next;
 }
