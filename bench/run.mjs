@@ -113,8 +113,13 @@ function runCodex(prompt, model, threadId) {
 
   return {
     sessionId: thread,
-    // Reasoning tokens are billed as output, so they belong in the output figure.
+    // Reasoning tokens are billed as output, so they belong in the billed figure — but
+    // response rules do not govern how long a model thinks, so they are also recorded
+    // separately. Comparing Codex totals against Claude's without splitting these out
+    // measures reasoning effort as much as reply length.
     outputTokens: (usage.output_tokens || 0) + (usage.reasoning_output_tokens || 0),
+    visibleOutputTokens: usage.output_tokens || 0,
+    reasoningTokens: usage.reasoning_output_tokens || 0,
     inputTokens: usage.input_tokens || 0,
     cacheRead: usage.cached_input_tokens || 0,
     cacheCreate: 0,
@@ -141,6 +146,8 @@ function session(model, mode) {
     turns: turnResults.length,
     outputTokens: sum('outputTokens'),
     outputPerTurn: Math.round(sum('outputTokens') / turnResults.length),
+    visibleOutputTokens: sum('visibleOutputTokens') || null,
+    reasoningTokens: sum('reasoningTokens') || null,
     inputTokens: sum('inputTokens'),
     cacheRead: sum('cacheRead'),
     cacheCreate: sum('cacheCreate'),
