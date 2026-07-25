@@ -12,7 +12,18 @@ picked up automatically by any statusline that renders plugin badges.
 /plugin install plain-speak@plain-speak
 ```
 
-Remove it the same way: `/plugin uninstall plain-speak`.
+Remove it the same way: `/plugin uninstall plain-speak`. The same thing works from a
+shell, which is handy for updates:
+
+```sh
+claude plugin marketplace add rnzsanchez/plain-speak
+claude plugin install plain-speak@plain-speak
+claude plugin marketplace update plain-speak && claude plugin update plain-speak@plain-speak
+```
+
+This is the route that gets the badge into a statusline automatically: statuslines
+that render plugin badges look for a `*-statusline.sh` under each installed plugin,
+and plain-speak ships one.
 
 ## npx (Claude Code and Codex)
 
@@ -76,8 +87,15 @@ a real check and it is yours to answer.
 ## Uninstall
 
 ```sh
-npx github:rnzsanchez/plain-speak uninstall
+npx github:rnzsanchez/plain-speak uninstall            # both tools
+npx github:rnzsanchez/plain-speak uninstall --claude   # leave Codex working
+npx github:rnzsanchez/plain-speak uninstall --codex
 ```
 
-Removes the hooks, the commands, the badge wiring and the runtime. Your mode and
+Removes the hooks, the commands, the badge wiring and the runtime. Removing one tool
+keeps the shared runtime in place, so the other tool keeps working.
+
+**Running both routes at once double-injects.** If you install the plugin and you
+already ran the npx installer for Claude Code, drop the npx side with
+`uninstall --claude`. Your mode and
 `state.json` stay behind; delete `~/.claude/plain-speak/` to be rid of them.

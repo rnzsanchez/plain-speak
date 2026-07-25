@@ -38,7 +38,7 @@ function main() {
       if (both || has('--claude')) claude.install({ chainStatusline: has('--statusline') });
       if (both || has('--codex')) codex.install();
       if (!state.readSafe(state.modePath())) state.writeMode('normal');
-      console.log(`\nMode: ${state.readMode()}. Change it in a session: /plain-speak-mode cte`);
+      console.log(`\nMode: ${state.readMode()}. Change it in a session: /plain-speak cte`);
       console.log('Restart Claude Code, or run /hooks once, to load the hooks.');
       return;
     }
