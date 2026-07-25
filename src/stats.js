@@ -12,6 +12,7 @@ function fromTranscript(file) {
   const totals = {
     replies: 0,
     outputTokens: 0,
+    proseTokens: 0,
     model: null,
   };
   let lines;
@@ -21,7 +22,9 @@ function fromTranscript(file) {
     return totals;
   }
 
-  const seen = new Set();
+  // One entry per message: usage is counted once, but the blocks arrive across the
+  // repeated rows and all of them are needed to tell prose from tool traffic.
+  const msgs = new Map();
   for (const line of lines) {
     if (!line) continue;
     let row;
@@ -32,17 +35,44 @@ function fromTranscript(file) {
     }
 
     if (row.type !== 'assistant' || !row.message) continue;
-    const id = row.message.id;
-    if (id && seen.has(id)) continue;
-    if (id) seen.add(id);
-
-    const u = row.message.usage || {};
-    totals.replies += 1;
-    totals.outputTokens += u.output_tokens || 0;
+    const id = row.message.id || `anon-${msgs.size}`;
+    if (!msgs.has(id)) {
+      msgs.set(id, { out: (row.message.usage || {}).output_tokens || 0, blocks: [] });
+      totals.replies += 1;
+      totals.outputTokens += (row.message.usage || {}).output_tokens || 0;
+    }
+    const blocks = Array.isArray(row.message.content) ? row.message.content : [];
+    msgs.get(id).blocks.push(...blocks);
     totals.model = row.message.model || totals.model;
   }
+
+  // Usage is per message, never per block, so the split is apportioned by size. Prose
+  // runs ~4 chars a token and tool JSON ~3, which makes this an estimate — but the gap
+  // between "what I said" and "what I did" is far too big to leave unsplit.
+  for (const m of msgs.values()) {
+    const seen = new Set();
+    const blocks = m.blocks.filter((b) => {
+      const key = `${b.type}:${blockSize(b)}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+    const total = blocks.reduce((a, b) => a + blockSize(b), 0);
+    if (!total) continue;
+    for (const b of blocks) {
+      if (b.type === 'text') totals.proseTokens += (m.out * blockSize(b)) / total;
+    }
+  }
+  totals.proseTokens = Math.round(totals.proseTokens);
   return totals;
 }
+
+const blockSize = (b) =>
+  b.type === 'text'
+    ? (b.text || '').length
+    : b.type === 'thinking'
+      ? (b.thinking || '').length
+      : JSON.stringify(b.input || {}).length;
 
 // Rough size of one injection, for "what did the rules cost me" — the usual
 // ~4 chars per token. Labelled as an estimate everywhere it is shown.
@@ -80,6 +110,14 @@ function report({ sessionId, transcriptPath } = {}) {
   const mode = state.readMode();
   const transcript = transcriptPath ? fromTranscript(transcriptPath) : null;
   const perInjection = rulesTokens(session.mode || mode);
+  const win = transcript ? savingsFor(transcript.model, mode) : null;
+
+  // What the rules can possibly have saved. A cut of c means what you see is (1-c) of
+  // what you would have got, so the difference is prose × c/(1-c) — and only the prose,
+  // because tool calls and code are written normally in every mode.
+  const cut = win ? win.outputCutPct / 100 : 0;
+  const saved = win && transcript ? Math.round((transcript.proseTokens * cut) / (1 - cut)) : null;
+  const spent = session.injections * perInjection;
 
   return {
     mode,
@@ -90,6 +128,10 @@ function report({ sessionId, transcriptPath } = {}) {
         transcript && transcript.replies
           ? Math.round(transcript.outputTokens / transcript.replies)
           : null,
+      saved,
+      spent,
+      net: saved == null ? null : saved - spent,
+      benchmark: win,
     },
     lifetime: store.lifetime,
     perInjection,
@@ -103,56 +145,57 @@ function bar(fraction, width = 10) {
   return '█'.repeat(filled) + '░'.repeat(width - filled);
 }
 
-// Only the numbers a user acts on: is it holding, is it nagging, how big are
-// the replies. Cache and raw input counts were noise and are gone.
+// Written to be read on a tired evening: the answer on the first line, plain words
+// under it, and every rough number labelled rough.
+const round100 = (v) => Math.round(v / 100) * 100;
+
 function format(r) {
   const s = r.session;
   const t = s.transcript;
   const out = [`plain-speak — ${r.mode}`, ''];
 
+  // The headline: did this thing pay for itself. Rough on purpose — the percentage
+  // behind it comes from a benchmark, not from this session's own replies.
+  if (r.mode === 'off') {
+    out.push('  Off. Nothing is injected and nothing is checked.', '');
+  } else if (s.saved != null) {
+    out.push(
+      `  Saved roughly ${n(round100(s.saved))} tokens. Cost ${n(round100(s.spent))} to do it.`,
+      `  Rough: ${Math.round(s.benchmark.outputCutPct)}% comes from a benchmark on ${t.model}, not from this session.`,
+      ''
+    );
+  } else if (t && t.model) {
+    out.push(`  No benchmark for ${t.model} yet, so no savings figure. See docs/benchmark.md.`, '');
+  }
+
   if (s.turns > 0) {
     const clean = (s.turns - s.trips) / s.turns;
     out.push(
       'This session',
-      `  holding      ${bar(clean)}  ${Math.round(clean * 100)}%   ${s.turns - s.trips} of ${s.turns} checked turns clean`,
-      `  reinjections ${n(s.injections)}${state.easedOff(s) ? ' — eased off, correcting less often' : ''}`
+      `  stayed short   ${bar(clean)}  ${s.turns - s.trips} of ${s.turns} replies`,
+      `  had to remind  ${n(s.injections)} time${s.injections === 1 ? '' : 's'}${state.easedOff(s) ? ', now reminding less often' : ''}`
     );
   } else {
-    out.push('This session', '  no turns recorded yet');
+    out.push('This session', '  nothing checked yet');
   }
 
   if (t && t.replies) {
-    // Turn counts come from plain-speak's own counters; token counts come from the
-    // whole transcript, which includes every tool-call reply. Different scopes, so
-    // they are labelled differently rather than stacked as if they matched.
+    // Two very different things, and the gap is the point: the rules only govern the
+    // talking. Code, commits and tool calls are written normally in every mode.
     out.push(
-      `  output       ${n(t.outputTokens)} tokens over ${n(t.replies)} messages · ${n(s.outputPerReply)} each`
+      `  I talked       ${n(t.proseTokens)} tokens`,
+      `  I worked       ${n(t.outputTokens - t.proseTokens)} tokens of tool calls and code — untouched by the rules`
     );
-    const win = savingsFor(t.model, r.mode);
-    if (win) {
-      // Deliberately NOT multiplied out into "you saved N tokens". The benchmark
-      // measures short question-and-answer turns; a real session is mostly tool
-      // traffic, so scaling that percentage across it would invent a number.
-      out.push(
-        `  measured     ${bar(win.outputCutPct / 100)}  ${Math.round(win.outputCutPct)}% shorter replies on ${t.model} in a ${win.turns}-turn benchmark`
-      );
-    } else if (r.mode === 'off') {
-      out.push('  measured     nothing to measure — mode is off');
-    } else {
-      out.push(
-        `  measured     no benchmark yet for ${t.model || 'this model'} (see docs/benchmark.md)`
-      );
-    }
   }
-  if (s.reason) out.push(`  last drift   ${s.reason}`);
+  if (s.reason) out.push(`  last slip      ${s.reason}`);
 
   const L = r.lifetime;
   out.push('', 'Lifetime');
   if (L.turns > 0) {
     const clean = (L.turns - L.trips) / L.turns;
     out.push(
-      `  holding      ${bar(clean)}  ${Math.round(clean * 100)}%   ${n(L.turns)} turns across ${n(L.sessions)} session${L.sessions === 1 ? '' : 's'}`,
-      `  reinjections ${n(L.injections)} total (~${n(L.injections * r.perInjection)} tokens)`
+      `  stayed short   ${bar(clean)}  ${n(L.turns - L.trips)} of ${n(L.turns)} replies, across ${n(L.sessions)} session${L.sessions === 1 ? '' : 's'}`,
+      `  reminders      ${n(L.injections)}, about ${n(round100(L.injections * r.perInjection))} tokens all in`
     );
   } else {
     out.push('  no history yet');

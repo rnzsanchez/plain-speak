@@ -305,7 +305,51 @@ test('e2e: stats reports the real session, never a benchmark one', () => {
 
   const report = JSON.parse(run(env, 'stats', '--json'));
   assert.equal(report.session.turns, 1);
-  assert.match(run(env, 'stats'), /holding/);
+  assert.match(run(env, 'stats'), /stayed short/);
+});
+
+test('e2e: the savings figure counts prose only, and nets off what the rules cost', () => {
+  const { env } = sandbox();
+  run(env, 'mode', 'normal');
+
+  // A transcript with one reply: 1,000 output tokens, split by size between what the
+  // model said and the tool call it made.
+  const file = path.join(env.CLAUDE_CONFIG_DIR, 'transcript.jsonl');
+  const msg = (content) => ({
+    type: 'assistant',
+    message: {
+      id: 'm1',
+      model: 'claude-opus-5',
+      usage: { output_tokens: 1000 },
+      content: [content],
+    },
+  });
+  fs.writeFileSync(
+    file,
+    [
+      JSON.stringify(msg({ type: 'text', text: 'x'.repeat(250) })),
+      JSON.stringify(msg({ type: 'tool_use', input: { cmd: 'y'.repeat(740) } })),
+    ].join('\n')
+  );
+
+  // Through the module, not the CLI: `stats` finds its own transcript by session id,
+  // and this needs a made-up one with a known split.
+  const r = JSON.parse(
+    execFileSync(
+      'node',
+      [
+        '-e',
+        `const s=require(${JSON.stringify(path.join(root, 'src', 'stats.js'))});
+         console.log(JSON.stringify(s.report({sessionId:'x', transcriptPath:process.argv[1]})));`,
+        file,
+      ],
+      { encoding: 'utf8', env, cwd: os.tmpdir() }
+    )
+  );
+  assert.equal(r.session.transcript.outputTokens, 1000, 'usage is counted once per message');
+  assert.ok(r.session.transcript.proseTokens < 400, 'the tool call is not prose');
+  assert.ok(r.session.saved < r.session.transcript.outputTokens, 'never scaled across tool traffic');
+  assert.equal(r.session.net, r.session.saved - r.session.spent);
 });
 
 test('e2e: uninstall puts the sandbox back, and --purge clears the data', () => {
