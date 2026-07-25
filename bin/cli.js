@@ -8,27 +8,23 @@ const state = require('../src/state');
 const stats = require('../src/stats');
 const claude = require('../src/install/claude');
 const codex = require('../src/install/codex');
+const { rulesFor } = require('../src/hooks/lib');
 
 const USAGE = `plain-speak — terse-response modes with an active hygiene checker
 
   plain-speak install [--claude] [--codex]   wire up hooks and slash commands
   plain-speak install --statusline           also chain the badge onto your statusline
-  plain-speak commands                       install /plain-speak and /plain-speak-stats only
   plain-speak uninstall [--claude|--codex]   remove what it added
   plain-speak uninstall --purge              …and delete the mode and stats too
   plain-speak status [mode] [--project]      show status, or switch mode (--project pins this repo)
   plain-speak mode [off|normal|cte]          show or set the mode ("max" = cte)
   plain-speak badge                          print the statusline badge
-  plain-speak stats [--session-file <path>]  token and drift report
+  plain-speak stats [--json]                 token and drift report
   plain-speak doctor                         check the install
 
 Modes: off (nothing) · normal (plain voice, the base) · cte (blunt, at twelve)
 `;
 
-function arg(flag) {
-  const i = process.argv.indexOf(flag);
-  return i === -1 ? null : process.argv[i + 1];
-}
 const has = (flag) => process.argv.includes(flag);
 
 function main() {
@@ -40,17 +36,9 @@ function main() {
       if (both || has('--claude')) claude.install({ chainStatusline: has('--statusline') });
       if (both || has('--codex')) codex.install();
       if (!state.readSafe(state.modePath())) state.writeMode('normal');
-      console.log(`\nMode: ${state.readMode()}. Change it in a session: /plain-speak cte  (plugin installs: /plain-speak:mode cte)`);
+      const how = claude.hasBareCommands() || codex.hasBareCommands() ? '/plain-speak cte' : '/plain-speak:mode cte';
+      console.log(`\nMode: ${state.readMode()}. Change it in a session: ${how}`);
       console.log('Restart Claude Code, or run /hooks once, to load the hooks.');
-      return;
-    }
-
-    // Plugin skills are always namespaced (/plain-speak:mode). Bare /plain-speak only
-    // exists as a user-level skill, so this installs those copies without touching hooks.
-    case 'commands': {
-      const names = claude.installCommands();
-      console.log(`installed: ${names.map((n) => `/${n}`).join(' ')}`);
-      console.log('They load at the next session start, or after /reload-skills.');
       return;
     }
 
@@ -72,7 +60,12 @@ function main() {
       let mode = state.readMode();
       let source = state.modeSource();
       if (wanted) {
-        mode = has('--project') ? state.writeProjectMode(wanted) : state.writeMode(wanted);
+        if (has('--project')) state.writeProjectMode(wanted);
+        else state.writeMode(wanted);
+        // Read it back rather than trusting the write: PLAIN_SPEAK_MODE and a project pin
+        // both outrank the global file, and the rules printed below have to be the ones
+        // the hooks will actually enforce.
+        mode = state.readMode();
         source = state.modeSource();
       } else if (mode === 'off' && source === 'global') {
         // No argument means "turn it on" — but only when the global setting is what
@@ -80,29 +73,37 @@ function main() {
         mode = state.writeMode('normal');
         source = state.modeSource();
       }
-      // Name the commands the user actually has. CLAUDE_PLUGIN_ROOT is not exported to
-      // skill Bash calls, so checking for the bare user-level command is the only
-      // reliable signal — and the bare form wins when both exist.
-      const bare = claude.hasBareCommands();
+      // Name the commands the user actually has. CLAUDE_PLUGIN_ROOT settles it when the
+      // harness exports it; otherwise the only signal is which bare skill exists on disk,
+      // and Codex counts too — it has no namespace, so its form is always the bare one.
+      const bare = !process.env.CLAUDE_PLUGIN_ROOT && (claude.hasBareCommands() || codex.hasBareCommands());
       const cmd = bare ? '/plain-speak' : '/plain-speak:mode';
 
-      // Show what each mode sounds like rather than describing it. Same question, three
-      // answers — that is the whole decision the user is making here.
+      // Show what the mode sounds like rather than describing it. Verbatim openers from
+      // one real run of the same question through Opus 5, with that reply's own token
+      // count — invented samples would be a claim about the modes that nothing backs.
       const SAMPLES = {
-        off: 'Great question! Force-pushing is generally risky…',
-        normal: 'No. Rewrites shared history. Use --force-with-lease.',
-        cte: 'No. Breaks other clones. --force-with-lease.',
+        off: ['Redis is an in-memory key-value store. That\'s the whole trick: your…', '1,765 tokens'],
+        normal: ['Redis keeps data in RAM, not on disk. That\'s the whole trick. A…', '1,466 tokens · 17% shorter'],
+        cte: ['Redis = in-memory key-value store. Cache = you put stuff there…', '1,195 tokens · 32% shorter'],
       };
 
       // Keep the source when it is not the global setting — a project pin that gives no
       // sign of itself is a mystery, and that was a documented promise.
       const from = source === 'global' ? '' : ` (from ${source})`;
       console.log(`plain-speak — ${mode}${mode === 'cte' ? ' 🧠' : ''}${from}\n`);
-      console.log('  "Is it safe to force-push to a shared branch?"\n');
-      const width = Math.max(...Object.keys(SAMPLES).map((m) => `${cmd} ${m}`.length)) + 2;
-      for (const [m, sample] of Object.entries(SAMPLES)) {
-        const marker = m === mode ? '▸' : ' ';
-        console.log(`  ${marker} ${`${cmd} ${m}`.padEnd(width)}${sample}`);
+      console.log('  "explain to me how redis cache works" — asked for real, Opus 5');
+      console.log(`  → ${SAMPLES[mode][0]}`);
+      console.log(`    ${SAMPLES[mode][1]}\n`);
+      console.log(`  switch: ${cmd} off | normal | cte    (--project pins this repo)`);
+
+      // A skill's stdout is tool output, so printing the ruleset puts it back in context.
+      // That is the reinit: bare /plain-speak re-arms the rules mid-session, and a switch
+      // has to send the new mode's rules or nothing changes until the next drift trip.
+      const rules = mode === 'off' ? '' : rulesFor(mode);
+      if (rules) {
+        console.log('\nRULES — for the assistant, not for display\n');
+        console.log(`PLAIN-SPEAK MODE: ${mode}\n\n${rules}`);
       }
       return;
     }
@@ -121,13 +122,10 @@ function main() {
     }
 
     case 'stats': {
-      // The harness exports the real session id, but it is only useful if we have
-      // counters for it — otherwise report the last real session we do know about.
-      const sessionId = arg('--session-id') || knownSession(process.env.CLAUDE_CODE_SESSION_ID);
-      const report = stats.report({
-        sessionId,
-        transcriptPath: arg('--session-file') || findTranscript(sessionId),
-      });
+      // The last real session we have counters for. Every Stop hook records one, so
+      // this is the session that just ran.
+      const sessionId = latestSessionId();
+      const report = stats.report({ sessionId, transcriptPath: findTranscript(sessionId) });
       console.log(has('--json') ? JSON.stringify(report, null, 2) : stats.format(report));
       return;
     }
@@ -141,11 +139,6 @@ function main() {
       console.log(USAGE);
       process.exit(cmd ? 1 : 0);
   }
-}
-
-function knownSession(id) {
-  if (id && state.readStore().sessions[id]) return id;
-  return latestSessionId();
 }
 
 // Last real session, benchmark runs excluded.
