@@ -32,7 +32,7 @@ node bench/report.mjs --write     # results table, and feed src/savings.json
 | `src/install/*.js` | Settings patching for each tool; `shared.js` holds what both need. |
 | `modes/*.md` | The rule text. `normal` is the base voice, `cte` is the same voice at twelve. |
 | `.claude-plugin/`, `hooks/` | Plugin + marketplace manifests. A plugin install needs no `settings.json` edits and no runtime copy, because `${CLAUDE_PLUGIN_ROOT}` is already stable. |
-| `skills/` | Two commands, named short (`mode`, `stats`) because a plugin install namespaces them as `/plain-speak:mode`. `copySkills()` prefixes them for npx installs, where there is no namespace, and rewrites the frontmatter `name` to match the directory — the two must agree. |
+| `skills/` | Two commands, named short (`init`, `stats`) because a plugin install namespaces them as `/plain-speak:init`. `copySkills()` prefixes them for npx installs, where there is no namespace, and rewrites the frontmatter `name` to match the directory — the two must agree. |
 | `docs/` | Install, checker, benchmark, tradeoffs. The README links out rather than growing. |
 
 Claude Code and Codex fire the same three events with near-identical payloads, so

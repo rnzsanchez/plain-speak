@@ -30,7 +30,7 @@ function copyRuntime() {
 // are named short — `mode`, `stats`. A standalone install has no namespace, so bare
 // `/mode` and `/stats` would be rude to everything else on the machine: prefix them
 // on the way in, and rewrite the frontmatter name to match the directory.
-const STANDALONE_NAMES = { mode: 'plain-speak', stats: 'plain-speak-stats' };
+const STANDALONE_NAMES = { init: 'plain-speak', stats: 'plain-speak-stats' };
 const standaloneName = (name) => STANDALONE_NAMES[name] || `plain-speak-${name}`;
 
 function copySkills(targetSkillsDir) {

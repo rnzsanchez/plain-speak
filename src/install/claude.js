@@ -58,9 +58,9 @@ function install({ chainStatusline = false } = {}) {
 
   writeJson(settingsPath(), settings);
 
-  // The plugin already carries the commands as /plain-speak:mode and /plain-speak:stats.
+  // The plugin already carries the commands as /plain-speak:init and /plain-speak:stats.
   // Copying user-level ones on top shows every command twice in the picker, so don't.
-  let commands = '/plain-speak:mode /plain-speak:stats (from the plugin)';
+  let commands = '/plain-speak:init /plain-speak:stats (from the plugin)';
   if (pluginInstalled(settings)) {
     // An earlier npx install may have left user-level copies behind. Leaving them is
     // what puts every command in the picker twice, so clear them on the way past.
@@ -127,7 +127,7 @@ function doctor() {
   else if (plugin) console.log('  ok   statusline badge (from the plugin, if yours renders them)');
   else console.log('  none statusline badge');
   if (plugin) {
-    console.log('  ok   /plain-speak:mode /plain-speak:stats (from the plugin)');
+    console.log('  ok   /plain-speak:init /plain-speak:stats (from the plugin)');
   } else {
     for (const name of ['plain-speak', 'plain-speak-stats']) {
       const there = fs.existsSync(path.join(skillsDir(), name, 'SKILL.md'));

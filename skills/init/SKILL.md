@@ -1,5 +1,5 @@
 ---
-name: mode
+name: init
 description: Show which plain-speak mode is active, or switch it.
 disable-model-invocation: true
 argument-hint: "[off | normal | cte]"
@@ -10,7 +10,7 @@ allowed-tools: Bash
 
 Run nothing. The active mode is already in this session's context, injected at session
 start as a `PLAIN-SPEAK MODE:` line and again on every switch. Reply with one line: the
-mode, and `/plain-speak:mode off | normal | cte` to change it.
+mode, and `/plain-speak:init off | normal | cte` to change it.
 
 ## A mode was passed
 

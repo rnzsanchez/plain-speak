@@ -36,7 +36,7 @@ function main() {
       if (both || has('--claude')) claude.install({ chainStatusline: has('--statusline') });
       if (both || has('--codex')) codex.install();
       if (!state.readSafe(state.modePath())) state.writeMode('normal');
-      const how = claude.hasBareCommands() || codex.hasBareCommands() ? '/plain-speak cte' : '/plain-speak:mode cte';
+      const how = claude.hasBareCommands() || codex.hasBareCommands() ? '/plain-speak cte' : '/plain-speak:init cte';
       console.log(`\nMode: ${state.readMode()}. Change it in a session: ${how}`);
       console.log('Restart Claude Code, or run /hooks once, to load the hooks.');
       return;
@@ -77,7 +77,7 @@ function main() {
       // harness exports it; otherwise the only signal is which bare skill exists on disk,
       // and Codex counts too — it has no namespace, so its form is always the bare one.
       const bare = !process.env.CLAUDE_PLUGIN_ROOT && (claude.hasBareCommands() || codex.hasBareCommands());
-      const cmd = bare ? '/plain-speak' : '/plain-speak:mode';
+      const cmd = bare ? '/plain-speak' : '/plain-speak:init';
 
       // Show what the mode sounds like rather than describing it. Verbatim openers from
       // one real run of the same question through Opus 5, with that reply's own token

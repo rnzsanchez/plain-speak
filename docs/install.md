@@ -6,7 +6,7 @@ Three ways in. Pick one.
 flowchart LR
     Q{"which tools?"} -->|"Claude Code only"| P["plugin<br/>no settings edits, badge automatic"]
     Q -->|"Codex, or both"| N["npx installer<br/>hooks in settings.json + ~/.codex"]
-    P --> C1["/plain-speak:mode · /plain-speak:stats"]
+    P --> C1["/plain-speak:init · /plain-speak:stats"]
     N --> C2["/plain-speak · /plain-speak-stats<br/>(skipped if the plugin is already enabled)"]
 ```
 
@@ -65,7 +65,7 @@ give you a bare `/plain-speak`. The npx installer places user-level commands, wh
 
 | | Plugin | npx |
 |---|---|---|
-| Switch mode | `/plain-speak:mode cte` | `/plain-speak cte` |
+| Switch mode | `/plain-speak:init cte` | `/plain-speak cte` |
 | Stats | `/plain-speak:stats` | `/plain-speak-stats` |
 
 You never get both. If the plugin is enabled in `~/.claude/settings.json`, the npx
@@ -103,8 +103,8 @@ The global mode lives in `~/.claude/plain-speak/mode`. Two things override it:
 | 2 | `.plain-speak-mode` in the working directory — one project only |
 | 3 | the global setting |
 
-Pin a project from inside a session with `/plain-speak:mode cte --project`, or write the
-file yourself. `/plain-speak:mode` reports which of the three is in force, so a pin is
+Pin a project from inside a session with `/plain-speak:init cte --project`, or write the
+file yourself. `/plain-speak:init` reports which of the three is in force, so a pin is
 never a mystery. Commit the file to share the choice, or add it to `.gitignore` to keep
 it yours.
 
