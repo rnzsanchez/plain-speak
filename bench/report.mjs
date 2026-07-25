@@ -34,6 +34,12 @@ for (const [model, modes] of byModel) {
     const run = modes[mode];
     if (!run) continue;
     const cut = base ? pct(base.outputPerTurn, run.outputPerTurn) : null;
+    // Where reasoning tokens are reported, the visible-reply cut is the figure that
+    // response rules actually influence. Both are shown.
+    const visibleCut =
+      base && base.visibleOutputTokens && run.visibleOutputTokens
+        ? pct(base.visibleOutputTokens, run.visibleOutputTokens)
+        : null;
     rows.push({
       model,
       mode,
@@ -41,6 +47,7 @@ for (const [model, modes] of byModel) {
       perTurn: run.outputPerTurn,
       base: base ? base.outputPerTurn : null,
       cut,
+      visibleCut,
       cost: run.costUsd,
     });
     if (cut != null) {
@@ -51,12 +58,13 @@ for (const [model, modes] of byModel) {
 }
 
 const cell = (v, d = '—') => (v == null ? d : v);
-console.log('| Model | Mode | Turns | Output/turn | Rules off | Cut |');
-console.log('|---|---|---:|---:|---:|---:|');
+console.log('| Model | Mode | Turns | Billed out/turn | Rules off | Cut | Visible-only cut |');
+console.log('|---|---|---:|---:|---:|---:|---:|');
 for (const r of rows.sort((a, b) => a.model.localeCompare(b.model) || a.mode.localeCompare(b.mode))) {
   const cut = r.cut == null ? '—' : `${r.cut.toFixed(0)}%`;
+  const vis = r.visibleCut == null ? '—' : `${r.visibleCut.toFixed(0)}%`;
   console.log(
-    `| ${r.model} | ${r.mode} | ${r.turns} | ${cell(r.perTurn)} | ${cell(r.base)} | ${cut} |`
+    `| ${r.model} | ${r.mode} | ${r.turns} | ${cell(r.perTurn)} | ${cell(r.base)} | ${cut} | ${vis} |`
   );
 }
 

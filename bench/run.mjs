@@ -20,7 +20,16 @@ const require = createRequire(import.meta.url);
 const state = require('../src/state.js');
 
 const CLAUDE_MODELS = ['claude-opus-5', 'claude-sonnet-5', 'claude-haiku-4-5'];
-const CODEX_MODELS = ['gpt-5.4', 'gpt-5.4-mini', 'gpt-5.5'];
+// Every chat model Codex offers locally, from ~/.codex/models_cache.json.
+// codex-auto-review is excluded — it is a review harness, not a chat model.
+const CODEX_MODELS = [
+  'gpt-5.6-sol',
+  'gpt-5.6-terra',
+  'gpt-5.6-luna',
+  'gpt-5.5',
+  'gpt-5.4',
+  'gpt-5.4-mini',
+];
 const isCodex = (m) => m.startsWith('gpt');
 
 function flag(name, fallback = null) {
