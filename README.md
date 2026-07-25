@@ -19,23 +19,18 @@ A rules file only works while the model can still see it. So the usual fix is to
 inject it on every prompt — and pay for it on every prompt, including the ones where
 the model was behaving perfectly.
 
-plain-speak injects once, then watches the output.
+plain-speak injects once, then watches the output. Every reply is scored, and the
+score decides whether the *next* prompt carries the rules.
 
-```
-you  ▸ how do I see what's on port 3000?
-       · nothing injected
+| | You ask | It answers | Verdict | Next prompt carries |
+|---|---|---|---|---|
+| 1 | what's on port 3000? | `lsof -i :3000` | clean | nothing |
+| 2 | and kill it? | "Certainly! It's worth noting you could leverage…" | **drift** | rules + the reason |
+| 3 | thanks | "Anytime." | clean | nothing |
+| 4 | why did it bind twice? | *(a long, careful explanation)* | exempt — you asked *why* | nothing |
 
-ai   ▸ Certainly! It's worth noting you could leverage `lsof` here…
-       · scored: filler + corporate word + fussy phrasing → drift
-
-you  ▸ and kill it?
-       · rules back in, once, silently, with the reason
-
-you  ▸ thanks
-       · nothing injected
-```
-
-No model call. No tokens. Nothing in your transcript.
+The check is a scan of the text. No model call, no tokens, and nothing of it appears
+in your transcript.
 
 ---
 
@@ -58,22 +53,33 @@ npx github:rnzsanchez/plain-speak install
 
 ## Modes
 
-| | Voice |
-|---|---|
-| `off` | Nothing injected. Nothing checked. |
-| **`normal`** | The base. Plain, answer first, full thoughts welcome, zero fuss. |
-| `cte` 🧠 | The same voice at twelve. Short. Blunt. Fragments. |
+Same question to each: *"My deploy failed, is it the cache?"*
 
-*"My deploy failed, is it the cache?"*
+### `off` — nothing injected, nothing checked
 
-> **off** — Great question! There are several factors that could be at play here. It's
-> worth noting that a stale build cache is a common culprit, and in order to determine
-> whether that's what you're facing, you would want to begin by examining…
->
-> **normal** — Maybe, but check the logs first. Cache trouble shows up as a build that
-> succeeds with stale output, which a failed deploy usually isn't. Paste the error.
->
-> **cte** — Maybe. Logs first. Cache breaks *builds*, not deploys. Paste error.
+```
+Great question! There are several factors that could be at play here. It's worth
+noting that a stale build cache is a very common culprit in situations like this,
+and in order to determine whether that's what you're facing, you would generally
+want to begin by examining your build logs to see whether…
+```
+
+### `normal` — the base voice
+
+Plain, answer first, full thoughts welcome, zero fuss.
+
+```
+Maybe, but check the logs first. Cache trouble shows up as a build that succeeds
+with stale output, which a failed deploy usually isn't. Paste the error.
+```
+
+### `cte` 🧠 — the same voice at twelve
+
+Short. Blunt. Fragments.
+
+```
+Maybe. Logs first. Cache breaks builds, not deploys. Paste error.
+```
 
 ---
 
@@ -88,6 +94,10 @@ Everything runs inside a session. Installing is the only thing you do in a shell
 | `/plain-speak-stats` | Token and drift report: this session, and lifetime |
 
 Same in both tools. Neither can be triggered by the model — only by you.
+
+Installed as a plugin, they carry the plugin's namespace:
+`/plain-speak:plain-speak` and `/plain-speak:plain-speak-stats`. New commands load on
+the next session start.
 
 The badge shows what's live, next to your other plugin badges:
 
