@@ -1,0 +1,42 @@
+{
+  "claude-haiku-4-5": {
+    "normal": {
+      "outputCutPct": 9.7,
+      "turns": 3
+    },
+    "cte": {
+      "outputCutPct": 5.2,
+      "turns": 3
+    }
+  },
+  "claude-opus-5": {
+    "normal": {
+      "outputCutPct": 44.6,
+      "turns": 3
+    },
+    "cte": {
+      "outputCutPct": 52.3,
+      "turns": 3
+    }
+  },
+  "claude-sonnet-5": {
+    "normal": {
+      "outputCutPct": 35.9,
+      "turns": 3
+    },
+    "cte": {
+      "outputCutPct": 59.1,
+      "turns": 3
+    }
+  },
+  "gpt-5.4": {
+    "normal": {
+      "outputCutPct": -5.4,
+      "turns": 3
+    },
+    "cte": {
+      "outputCutPct": -14.6,
+      "turns": 3
+    }
+  }
+}

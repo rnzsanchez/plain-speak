@@ -96,7 +96,10 @@ function main() {
     }
 
     case 'stats': {
-      const sessionId = arg('--session-id') || latestSessionId();
+      // The harness exports the real session id; fall back to the last non-benchmark
+      // session so this still works from a plain shell.
+      const sessionId =
+        arg('--session-id') || process.env.CLAUDE_CODE_SESSION_ID || latestSessionId();
       const report = stats.report({
         sessionId,
         transcriptPath: arg('--session-file') || findTranscript(sessionId),
@@ -116,13 +119,13 @@ function main() {
   }
 }
 
-// Without --session-id, fall back to the most recently touched session so
-// `plain-speak stats` still works from a plain shell.
+// Last real session, benchmark runs excluded.
 function latestSessionId() {
   const store = state.readStore();
-  return Object.entries(store.sessions).sort(
-    (a, b) => (b[1].updatedAt || 0) - (a[1].updatedAt || 0)
-  )[0]?.[0];
+  if (store.lastSessionId) return store.lastSessionId;
+  return Object.entries(store.sessions)
+    .filter(([, s]) => !s.bench)
+    .sort((a, b) => (b[1].updatedAt || 0) - (a[1].updatedAt || 0))[0]?.[0];
 }
 
 // Claude Code stores transcripts at ~/.claude/projects/<slug>/<session-id>.jsonl,

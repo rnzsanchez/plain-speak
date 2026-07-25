@@ -6,13 +6,13 @@ Both sides, measured where measurement was possible.
 
 | Upside | Grounding |
 |---|---|
-| Shorter answers | Measured on 3-prompt sessions: Opus 5 cut output 45% (`normal`) and 52% (`cte`); Sonnet 5 cut 36% and 59%. Method and full numbers in [the benchmark](./benchmark.md) and [RESULTS.md](../RESULTS.md). |
+| Shorter answers on the big models | Measured on 3-prompt sessions: Opus 5 cut output 45% (`normal`) and 52% (`cte`); Sonnet 5 cut 36% and 59%. Smaller models gain far less, and one got worse — see the cost table and [RESULTS.md](../RESULTS.md). |
 | The rules keep working | The point of the thing. Injected once, then re-sent only when a reply stops matching the mode — not on every prompt. |
 | Checking costs no tokens | It is a text scan inside a `Stop` hook. No model call, nothing added to context. |
 | Invisible | Verdicts and reinjections reach the model with `suppressOutput`, so nothing lands in your transcript. Asserted in `test/hooks.test.mjs`. |
 | It replaces nothing | Only hook entries whose own command contains `plain-speak` are ever touched. A clean machine and a plugin-loaded one end up in the same state. |
 | Per-project modes | A `.plain-speak-mode` file pins one repo; `PLAIN_SPEAK_MODE` overrides for one shell. Neither disturbs your global setting. |
-| Nothing to trust but Node | Zero dependencies, one bash script, about 1,100 lines of source in total. |
+| Nothing to trust but Node | Zero dependencies, one bash script, about 1,300 lines of source in total. |
 | Reversible | `uninstall` restores your settings from the backup; `uninstall --purge` removes the data too. |
 
 ## What it costs
@@ -24,7 +24,7 @@ Both sides, measured where measurement was possible.
 | The badge re-renders as you type | Measured at 27 ms, against 25 ms for `bash -c :`. Builtins only, one small file read, so roughly 2 ms is ours. |
 | The checker is a heuristic | It will sometimes miss a fussy reply and sometimes flag one that needed a long sentence — `cte` more, since it trips on a single hit. Quoting a phrase no longer counts as using it, which removed the biggest false-positive source. |
 | Terser is not always better | A short answer can drop context you wanted. `cte` especially. Use `normal`, or ask for detail and the checker stands down. |
-| It does not always help | Measured: on Haiku 4.5, `normal` cut only 10% and `cte` came out **5% longer** than rules-off. Small models are already terse, and a 3-prompt sample is noisy. Do not assume the Opus figures carry over to yours. |
+| It does not always help | Measured: on Haiku 4.5 the cut was only 10% (`normal`) and 5% (`cte`). On `gpt-5.4` both modes came out **longer** than rules-off — −5% and −15%. A 3-prompt sample is noisy, but the direction is real: do not assume the Opus figures carry over to your model. |
 | Codex asks for trust | Hooks must be trusted on first run. The installer does not bypass that prompt for you. |
 | Node 18+ on `PATH` | No dependencies, but the hooks need node. |
 

@@ -116,6 +116,7 @@ const BLANK_SESSION = {
 
 const BLANK_STORE = {
   version: 1,
+  lastSessionId: null,
   lifetime: { turns: 0, trips: 0, injections: 0, sessions: 0 },
   sessions: {},
 };
@@ -155,11 +156,14 @@ function readSession(id, store = readStore()) {
 function saveSession(id, session, store = readStore()) {
   const key = sanitizeId(id);
   const isNew = !store.sessions[key];
-  store.sessions[key] = { ...session, updatedAt: Date.now() };
+  const bench = isBenchmark();
+  store.sessions[key] = { ...session, bench, updatedAt: Date.now() };
   if (isNew) {
     store.sessions[key].startedAt = session.startedAt || Date.now();
-    if (!isBenchmark()) store.lifetime.sessions += 1;
+    if (!bench) store.lifetime.sessions += 1;
   }
+  // Remembered so `stats` never reports a throwaway benchmark session as yours.
+  if (!bench) store.lastSessionId = key;
   writeStore(store);
   return store;
 }

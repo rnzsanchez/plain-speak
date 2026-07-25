@@ -136,13 +136,18 @@ function format(r) {
     );
     const win = savingsFor(t.model, r.mode);
     if (win) {
-      const cut = win.outputCutPct / 100;
-      const saved = Math.round((t.outputTokens * cut) / (1 - cut));
+      // Deliberately NOT multiplied out into "you saved N tokens". The benchmark
+      // measures short question-and-answer turns; a real session is mostly tool
+      // traffic, so scaling that percentage across it would invent a number.
       out.push(
-        `  saved        ${bar(cut)}  ${win.outputCutPct}%   ~${n(saved)} tokens vs rules off`
+        `  measured     ${bar(win.outputCutPct / 100)}  ${Math.round(win.outputCutPct)}% shorter replies on ${t.model} in a ${win.turns}-turn benchmark`
       );
+    } else if (r.mode === 'off') {
+      out.push('  measured     nothing to measure — mode is off');
     } else {
-      out.push(`  saved        no benchmark yet for ${t.model || 'this model'}`);
+      out.push(
+        `  measured     no benchmark yet for ${t.model || 'this model'} (see docs/benchmark.md)`
+      );
     }
   }
   if (s.reason) out.push(`  last drift   ${s.reason}`);

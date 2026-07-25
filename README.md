@@ -133,7 +133,7 @@ This session
   holding      ████████░░  83%   5 of 6 turns clean
   reinjections 2
   output       4,180 tokens over 12 messages · 348 each
-  saved        ████░░░░░░  45%   ~3,420 tokens vs rules off
+  measured     ████░░░░░░  45% shorter replies on claude-opus-5 in a 3-turn benchmark
   last drift   filler: "certainly"; corporate word: "leverage"
 
 Lifetime
@@ -141,8 +141,12 @@ Lifetime
   reinjections 12 total (~2,196 tokens)
 ```
 
-Counts are read from the transcript, so they are real. The `saved` line appears only
-once a benchmark has run for that model — no data, no figure.
+Counts are read from the transcript, so they are real.
+
+The `measured` line is the benchmark result for your model, and it is deliberately not
+multiplied out into "you saved N tokens" — the benchmark measures short question-and-
+answer turns, while a real session is mostly tool traffic. Scaling one onto the other
+would invent a number. No benchmark for your model means no line at all.
 
 → **[Measuring it yourself](./docs/benchmark.md)** · **[Current numbers](./RESULTS.md)**
 
