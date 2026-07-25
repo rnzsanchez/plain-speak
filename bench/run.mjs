@@ -145,7 +145,10 @@ function session(model, mode) {
       ? runCodex(prompt, model, sessionId)
       : runClaude(prompt, model, sessionId);
     sessionId = t.sessionId;
-    turnResults.push({ prompt, ...t });
+    // The id is needed to resume the next turn, not to keep. Saved results go in a
+    // public repo, and a real session id is not something the numbers need.
+    const { sessionId: _drop, ...turn } = t;
+    turnResults.push({ prompt, ...turn });
     process.stdout.write(`    ${String(t.outputTokens).padStart(6)} out  ${prompt.slice(0, 48)}\n`);
   }
   const sum = (k) => turnResults.reduce((a, t) => a + (t[k] || 0), 0);
