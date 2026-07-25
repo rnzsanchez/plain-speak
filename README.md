@@ -1,24 +1,49 @@
+<div align="center">
+
 # plain-speak
 
-Response rules for Claude Code and Codex that **check whether the model actually
-followed them**, and put them back only when it drifts.
+### Rules that check themselves.
 
-Most rule files are injected on every single prompt. That works, and it costs you
-tokens on every single prompt — including the ones where the model was behaving
-perfectly. plain-speak injects once at session start, then watches the output. A
-silent check scores each reply; the rules go back in only when a reply stops
-sounding like the mode.
+**Terse-response modes for Claude Code and Codex — with a silent checker that reads
+every reply and puts the rules back only when the model drifts.**
+
+[![npm](https://img.shields.io/npm/v/plain-speak?color=2ea8a5&label=npm)](https://www.npmjs.com/package/plain-speak)
+[![licence](https://img.shields.io/badge/licence-MIT-2ea8a5)](./LICENSE)
+[![node](https://img.shields.io/badge/node-%E2%89%A518-2ea8a5)](https://nodejs.org)
+[![dependencies](https://img.shields.io/badge/dependencies-0-2ea8a5)](./package.json)
 
 ```
-you: how do I check what's on port 3000?
-     → nothing injected
-
-model: Certainly! It is worth noting that you could leverage `lsof`...
-     → drift scored: filler, corporate word, fussy phrasing
-
-you: and kill it?
-     → rules reinjected, once, with the reason
+npx plain-speak install
 ```
+
+</div>
+
+---
+
+## The problem
+
+A rules file only works while the model can still see it. So the usual fix is to
+inject it on every prompt — which means paying for it on every prompt, including
+the ones where the model was behaving perfectly.
+
+## The idea
+
+Inject once. Then **watch the output.**
+
+```
+you   ▸ how do I check what's on port 3000?
+        └ nothing injected
+
+model ▸ Certainly! It's worth noting you could leverage `lsof`…
+        └ scored: filler · corporate word · fussy phrasing → drift
+
+you   ▸ and kill it?
+        └ rules reinjected, once, silently, with the reason
+```
+
+No model call. No tokens. Nothing in your transcript. You never see it happen.
+
+---
 
 ## Install
 
@@ -26,110 +51,116 @@ you: and kill it?
 npx plain-speak install
 ```
 
-Wires three hooks, adds a statusline badge, installs `/plain-speak-stats`. Your
-existing statusline is kept — the badge is prepended to it, not swapped for it.
-Restart Claude Code, or run `/hooks` once.
+<table>
+<tr><td>
+
+Wires three hooks, adds a statusline badge, installs four slash commands. Your
+existing statusline is **kept** — the badge is prepended, not swapped in. Then
+restart, or run `/hooks` once.
+
+</td></tr>
+</table>
 
 ```sh
-npx plain-speak install --claude   # one tool only
+npx plain-speak install --claude    # one tool only
 npx plain-speak install --codex
-npx plain-speak uninstall          # puts settings back
+npx plain-speak uninstall           # puts your settings back
 ```
 
-## Commands
-
-In a Claude Code or Codex session:
-
-| Command | What it does |
-|---|---|
-| `/plain-speak-stats` | The report below. Never runs on its own — you invoke it. |
-| `plain-speak cte` | Switch to caveman mode mid-conversation. |
-| `plain-speak normal` | Back to the base voice. |
-| `plain-speak off` | Stop injecting and stop checking. |
-
-The switch phrases are typed as ordinary text, not slash commands, and they are the
-only thing plain-speak ever prints to you.
-
-In a shell:
-
-| Command | What it does |
-|---|---|
-| `npx plain-speak install` | Wire up hooks, badge and the stats command. `--claude` / `--codex` to pick one. |
-| `npx plain-speak uninstall` | Remove everything it added; your settings go back. |
-| `plain-speak mode` | Print the current mode. |
-| `plain-speak mode cte` | Set the mode. `off`, `normal`, `cte` (`max` also means `cte`). |
-| `plain-speak badge` | Print the statusline badge. |
-| `plain-speak stats` | The report, for the most recent session. |
-| `plain-speak doctor` | Check what is wired and what is missing. |
-| `node bench/run.mjs --dry-run` | Show the benchmark plan and cost without calling anything. |
-| `node bench/report.mjs --write` | Build the results table and feed the savings figure. |
+---
 
 ## Modes
 
-| Mode | Voice |
+<table>
+<tr>
+<th align="left">Mode</th>
+<th align="left">Voice</th>
+</tr>
+<tr>
+<td><code>off</code></td>
+<td>Nothing injected. Nothing checked.</td>
+</tr>
+<tr>
+<td><b><code>normal</code></b></td>
+<td>The base. Plain human voice, answer first, full thoughts welcome, zero fuss.</td>
+</tr>
+<tr>
+<td><code>cte</code> 🧠</td>
+<td>Caveman, turned to twelve. Short. Blunt. Fragments.</td>
+</tr>
+</table>
+
+### One question, three modes
+
+> *Is it safe to force-push to a shared branch?*
+
+| | |
 |---|---|
-| `off` | Nothing injected, nothing checked. |
-| `normal` | The base. Plain human voice, answer first, full thoughts fine, no fuss. |
-| `cte` 🧠 | Caveman, turned to twelve. Short. Blunt. Fragments. |
+| **off** | "Great question! Force-pushing to a shared branch is generally considered risky, because it rewrites history that other collaborators may have already based their work on. It's worth noting that…" |
+| **normal** | "No. It rewrites history other people already pulled. Use `--force-with-lease` if you must, and tell the branch's users first." |
+| **cte** | "No. Breaks other people's clones. Need it? `--force-with-lease`. Tell them first." |
+
+The badge tells you which one is live:
+
+```
+[PLAIN 🧠 CTE]  opus · plain-speak · main
+```
+
+---
+
+## Commands
+
+Everything runs **inside a session**. The installer is the only shell command.
+
+| Command | What it does |
+|---|---|
+| `/plain-speak` | Show the active mode and the mode table |
+| `/plain-speak-mode cte` | Switch mode — `off`, `normal`, `cte`. No argument prints the current one |
+| `/plain-speak-stats` | Token and drift report: this session, and lifetime |
+| `/plain-speak-doctor` | Check that hooks, badge and commands are wired |
+
+Identical in Claude Code and Codex. None of them can be triggered by the model —
+only by you. Prefer plain text? Typing `plain-speak cte` works too.
+
+---
+
+## The checker
+
+It scores **tone, not length.** A long, complete answer is fine. A fussy one is not.
+Each hit is a point; the mode's threshold decides when the points mean drift, so one
+stray word never trips `normal`.
+
+| Signal | Caught |
+|---|---|
+| 🪶 **Filler** | "Certainly", "Great question", "I hope this helps" |
+| 💼 **Corporate** | leverage, utilize, facilitate, seamless, holistic |
+| 🎩 **Fussy** | furthermore, subsequently, "it is important to note" |
+| 🤖 **Robotic** | "I have completed the task", "please be advised", "kindly" |
+| 🧱 **Walls** | multi-sentence paragraphs past the threshold |
+| 📏 **Long sentences** | past the threshold |
+
+### It knows when to shut up
+
+Silent when the output was *meant* to be long:
+
+- You asked for **detail**, a **walkthrough**, a **plan**, a **doc**, or **why**
+- The reply is **mostly code**
+- The turn was a **plan**
+
+### It will not nag
+
+**Three** reinjections per session · **never** two in a row · **two clean turns**
+give the budget back.
 
 ```sh
-plain-speak mode cte      # or: mode normal, mode off ("max" also means cte)
-plain-speak mode          # prints the current one
+PLAIN_SPEAK_MAX_RETRIES=1 claude   # stricter
 ```
 
-Or mid-conversation, just type `plain-speak cte`.
-
-The badge shows which one is live:
-
-```
-[PLAIN 🧠 CTE]  opus • plain-speak • main
-```
-
-### Same question, three modes
-
-> Is it safe to force-push to a shared branch?
-
-| Mode | Reply |
-|---|---|
-| `off` | "Great question! Force-pushing to a shared branch is generally considered risky because it rewrites history that other collaborators may have already based work on. It's worth noting that…" |
-| `normal` | "No. It rewrites history other people already pulled. Use `--force-with-lease` if you must, and tell the branch's users first." |
-| `cte` | "No. Breaks other people's clones. Need it? `--force-with-lease`. Tell them first." |
-
-## The hygiene check
-
-Runs on every reply. No model call, no tokens, and **you never see it**. The
-score, the verdict and the reinjected rules all go to the model with
-`suppressOutput`, so nothing lands in your transcript. The only thing plain-speak
-ever shows you is a one-line confirmation when you switch mode yourself.
-
-It scores tone, not length — a long, complete answer is fine; a fussy one is not.
-Each hit is a point, and the mode's threshold decides when the points mean drift.
-
-| Signal | Examples |
-|---|---|
-| Filler | "Certainly", "Great question", "I hope this helps" |
-| Corporate words | leverage, utilize, facilitate, seamless, holistic |
-| Fussy phrasing | furthermore, subsequently, "it is important to note" |
-| Robot register | "I have completed the task", "please be advised", "kindly" |
-| Walls of prose | multi-sentence paragraphs past the mode's threshold |
-| Long sentences | past the mode's threshold |
-
-It stays quiet when the output was *supposed* to be long:
-
-- You asked for detail, a walkthrough, a plan, a doc, or an explanation of why.
-- The reply is mostly code.
-- The turn was a plan.
-
-And it will not nag. Three reinjections per session, never two in a row, and two
-clean turns give the budget back.
-
-```sh
-PLAIN_SPEAK_MAX_RETRIES=1 claude   # tighten it
-```
+---
 
 ## Stats
 
-`/plain-speak-stats` in a session, or `plain-speak stats` in a shell:
+`/plain-speak-stats`
 
 ```
 plain-speak — cte
@@ -146,65 +177,78 @@ Lifetime
   reinjections 12 total (~2,196 tokens)
 ```
 
-Token counts come from the transcript, so they are the real numbers. The `saved`
-line appears only once a benchmark has been run for that model — no benchmark
-data, no figure.
+Token counts are read from the transcript, so they are the real numbers. The
+`saved` line appears **only** once a benchmark has run for that model. No data, no
+figure.
 
-## Measuring it yourself
+---
+
+## Measure it yourself
 
 ```sh
-node bench/run.mjs --dry-run                                  # plan and cost, no calls
-node bench/run.mjs --models claude-haiku-4-5 --turns 3         # cheap real run
-node bench/report.mjs --write                                 # table + feed the stats
+node bench/run.mjs --dry-run                            # plan and cost, zero calls
+node bench/run.mjs --models claude-haiku-4-5 --turns 3  # cheap real run
+node bench/report.mjs --write                           # table, and feed the stats
 ```
 
-Each run is a real multi-turn session, because that is the only honest way to
-measure this: the rules are injected once and cache-read afterwards, so one-shot
-sessions make cache-creation dominate the bill and hide the difference.
+Every benchmark session is **multi-turn**, because that is the only honest way to
+measure this. Rules are injected once and cache-read afterwards; one-shot sessions
+let cache-creation dominate the bill and hide the difference entirely.
 
-Results land in `bench/results/`. `RESULTS.md` has the current numbers.
+Results land in `bench/results/`. Current numbers live in [`RESULTS.md`](./RESULTS.md).
 
-## What it costs you
+---
 
-Worth knowing before you install.
+## Before you install
+
+<details open>
+<summary><b>The honest downsides</b></summary>
+
+<br>
 
 | Downside | Detail |
 |---|---|
-| It edits your settings | `~/.claude/settings.json` and `~/.codex/hooks.json`. A `.plain-speak-backup` copy is written first, and `uninstall` puts them back. |
-| It removes one existing hook | Only a hand-rolled `cat ~/.claude/response-rules.md` hook, which this replaces. It is named in the install output. Nothing else is touched. |
-| Three node processes per turn | Roughly 40–60 ms each. Unnoticeable next to a model call, but it is not zero. |
-| The badge runs constantly | The statusline is re-rendered as you type. That is why it is bash and reads one small file. |
-| The check is a heuristic | It scores phrasing. It will occasionally miss a fussy reply, and occasionally flag a reply that had to use a long sentence — `cte` more than `normal`, because `cte` trips on a single hit. |
-| Terser is not always better | A shorter answer can leave out context you wanted. `cte` especially. If that bites, use `normal`, or ask for detail and the check stands down. |
-| The mode is global | One setting across every project and session. A benchmark run changes it temporarily and restores it on exit. |
-| Codex asks for trust | Hooks must be trusted on first run. The installer tells you rather than bypassing the prompt. |
-| Node 18+ required | No dependencies, but node has to be on `PATH` for the hooks to run. |
-| Uninstall keeps your data | Your mode and `state.json` stay behind. Delete `~/.claude/plain-speak/` to be rid of it. |
+| **It edits your settings** | `~/.claude/settings.json` and `~/.codex/hooks.json`. A `.plain-speak-backup` is written first; `uninstall` restores them. |
+| **It removes one existing hook** | Only a hand-rolled `cat ~/.claude/response-rules.md` hook, which this supersedes. It is named in the install output. Nothing else is touched. |
+| **Three node processes per turn** | Roughly 40–60 ms each. Invisible next to a model call, but not zero. |
+| **The badge runs constantly** | Re-rendered as you type. That is why it is bash and reads one small file. |
+| **The checker is a heuristic** | It will sometimes miss a fussy reply, and sometimes flag one that needed a long sentence — `cte` more than `normal`, since `cte` trips on a single hit. |
+| **Terser is not always better** | A short answer can drop context you wanted. `cte` especially. Use `normal`, or ask for detail and the checker stands down. |
+| **The mode is global** | One setting across every project. A benchmark run changes it temporarily and restores it on exit. |
+| **Codex asks for trust** | Hooks must be trusted on first run. The installer tells you instead of bypassing the prompt. |
+| **Node 18+ on `PATH`** | No dependencies, but the hooks need node. |
+| **Uninstall keeps your data** | Mode and `state.json` stay. Delete `~/.claude/plain-speak/` to be rid of it. |
 
-It stores counters only — turn counts, drift trips, reinjections. No prompt text
-and no reply text is ever written to disk.
+**On privacy:** counters only — turn counts, drift trips, reinjections. No prompt
+text and no reply text is ever written to disk.
 
-It also stays out of the way of everything else you have installed: it only ever
-adds or removes hook entries whose command contains `plain-speak`, it prepends to
-your statusline instead of replacing it, and its one command is namespaced and
-marked so the model can never invoke it on its own.
+**On your other tools:** it only adds or removes hook entries whose command contains
+`plain-speak`, it prepends to your statusline instead of replacing it, and its
+commands are namespaced and flagged so the model can never invoke them.
 
-## How it works
+</details>
 
-| Piece | What it does |
+---
+
+## Under the hood
+
+| Piece | Job |
 |---|---|
-| `SessionStart` hook | Injects the mode's rules once |
-| `UserPromptSubmit` hook | Injects nothing, unless drift was flagged or you switched mode |
+| `SessionStart` hook | Injects the mode's rules — once |
+| `UserPromptSubmit` hook | Injects **nothing**, unless drift was flagged or you switched mode |
 | `Stop` hook | Scores the reply, records the verdict, prints nothing, never blocks |
+| `src/drift.js` | The checker. Pure functions, fully unit-tested |
 | `src/statusline.sh` | The badge |
-| `~/.claude/plain-speak/` | Runtime, mode file, and state — one folder |
+| `~/.claude/plain-speak/` | Runtime, mode, state — one folder |
 
-Codex uses the same three events and the same scripts; only the config file
-differs (`~/.codex/hooks.json`). Codex will ask you to trust the hooks on first
-run — that prompt is the point, so the installer doesn't bypass it.
+Codex fires the same three events with the same payloads, so the same scripts serve
+both; only the config file differs. Zero dependencies — Node, plus one bash script
+for the badge.
 
-Everything is Node with no dependencies, plus one bash script for the badge.
+<div align="center">
 
-## Licence
+---
 
-MIT
+**MIT** · built for people who like short answers
+
+</div>
