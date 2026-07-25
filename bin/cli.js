@@ -13,7 +13,7 @@ const USAGE = `plain-speak — terse-response modes with an active hygiene check
 
   plain-speak install [--claude] [--codex]   wire up hooks and slash commands
   plain-speak install --statusline           also chain the badge onto your statusline
-  plain-speak uninstall                      remove everything it added
+  plain-speak uninstall [--claude|--codex]   remove what it added
   plain-speak status [mode]                  show status, or switch mode
   plain-speak mode [off|normal|cte]          show or set the mode ("max" = cte)
   plain-speak badge                          print the statusline badge
@@ -43,10 +43,12 @@ function main() {
       return;
     }
 
-    case 'uninstall':
-      claude.uninstall();
-      codex.uninstall();
+    case 'uninstall': {
+      const both = !has('--claude') && !has('--codex');
+      if (both || has('--claude')) claude.uninstall({ keepRuntime: has('--claude') });
+      if (both || has('--codex')) codex.uninstall();
       return;
+    }
 
     // What /plain-speak runs. No argument: turn it on if it was off, then show
     // where things stand. With an argument: switch mode.

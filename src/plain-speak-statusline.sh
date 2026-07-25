@@ -18,7 +18,7 @@ MODE=$(head -c 32 "$FLAG" 2>/dev/null | tr -d '\n\r' | tr '[:upper:]' '[:lower:]
 MODE=$(printf '%s' "$MODE" | tr -cd 'a-z-')
 
 case "$MODE" in
-  normal) printf '\033[38;5;79m[PLAIN]\033[0m ' ;;
-  cte)    printf '\033[38;5;170m[PLAIN 🧠 CTE]\033[0m ' ;;
+  normal) printf '\033[38;5;79m[PLAIN]\033[0m' ;;
+  cte)    printf '\033[38;5;170m[PLAIN 🧠 CTE]\033[0m' ;;
   *)      exit 0 ;;  # off, empty, or anything unrecognised renders nothing
 esac

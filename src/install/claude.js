@@ -76,7 +76,7 @@ function install({ chainStatusline = false } = {}) {
   for (const entry of removed) console.log(`  removed superseded hook — ${entry}`);
 }
 
-function uninstall() {
+function uninstall({ keepRuntime = false } = {}) {
   const settings = readJson(settingsPath(), null);
   if (settings && settings.hooks) {
     for (const event of Object.keys(HOOK_EVENTS)) {
@@ -98,9 +98,12 @@ function uninstall() {
     writeJson(settingsPath(), settings);
   }
   removeSkills(skillsDir());
-  fs.rmSync(path.join(runtimeDir(), 'src'), { recursive: true, force: true });
-  fs.rmSync(path.join(runtimeDir(), 'bin'), { recursive: true, force: true });
-  fs.rmSync(path.join(runtimeDir(), 'modes'), { recursive: true, force: true });
+  // Codex hooks point at the same runtime copy, so only a full uninstall removes it.
+  if (!keepRuntime) {
+    for (const sub of ['src', 'bin', 'modes']) {
+      fs.rmSync(path.join(runtimeDir(), sub), { recursive: true, force: true });
+    }
+  }
   console.log('Claude Code: hooks, badge and commands removed (state.json and mode kept)');
 }
 
