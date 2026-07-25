@@ -8,17 +8,20 @@ const path = require('path');
 
 const MODES_DIR = path.join(__dirname, '..', '..', 'modes');
 
+// Returns null when there is nothing usable, so the hook can decline to act rather
+// than guessing. Acting on a payload we could not read is how you get state written
+// under a session id of "unknown".
 function readInput() {
   let raw = '';
   try {
     raw = fs.readFileSync(0, 'utf8');
   } catch {
-    return {};
+    return null;
   }
   try {
     return JSON.parse(raw);
   } catch {
-    return {};
+    return null;
   }
 }
 
@@ -71,7 +74,8 @@ function notify(hookEventName, message, context) {
 // puts the error on stderr, which the harness shows in its debug log.
 function run(fn) {
   try {
-    fn(normalize(readInput()));
+    const data = readInput();
+    if (data && typeof data === 'object') fn(normalize(data));
   } catch (err) {
     if (process.env.PLAIN_SPEAK_DEBUG === '1') {
       process.stderr.write(`plain-speak hook failed: ${err && err.stack ? err.stack : err}\n`);

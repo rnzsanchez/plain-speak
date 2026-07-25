@@ -60,12 +60,16 @@ function main() {
     case 'status': {
       const wanted = process.argv[3] && !process.argv[3].startsWith('--') ? process.argv[3] : null;
       let mode = state.readMode();
+      let source = state.modeSource();
       if (wanted) {
         mode = has('--project') ? state.writeProjectMode(wanted) : state.writeMode(wanted);
-      } else if (mode === 'off') {
+        source = state.modeSource();
+      } else if (mode === 'off' && source === 'global') {
+        // No argument means "turn it on" — but only when the global setting is what
+        // switched it off. An env var or project pin that says off is a decision.
         mode = state.writeMode('normal');
+        source = state.modeSource();
       }
-      const source = state.modeSource();
       // Plugin installs namespace the commands; standalone ones do not.
       const plugin = Boolean(process.env.CLAUDE_PLUGIN_ROOT);
       const cmd = plugin ? '/plain-speak:mode' : '/plain-speak';
@@ -100,10 +104,9 @@ function main() {
     }
 
     case 'stats': {
-      // The harness exports the real session id; fall back to the last non-benchmark
-      // session so this still works from a plain shell.
-      const sessionId =
-        arg('--session-id') || process.env.CLAUDE_CODE_SESSION_ID || latestSessionId();
+      // The harness exports the real session id, but it is only useful if we have
+      // counters for it — otherwise report the last real session we do know about.
+      const sessionId = arg('--session-id') || knownSession(process.env.CLAUDE_CODE_SESSION_ID);
       const report = stats.report({
         sessionId,
         transcriptPath: arg('--session-file') || findTranscript(sessionId),
@@ -121,6 +124,11 @@ function main() {
       console.log(USAGE);
       process.exit(cmd ? 1 : 0);
   }
+}
+
+function knownSession(id) {
+  if (id && state.readStore().sessions[id]) return id;
+  return latestSessionId();
 }
 
 // Last real session, benchmark runs excluded.
