@@ -73,12 +73,16 @@ function main() {
       console.log(
         `plain-speak — ${mode}${mode === 'cte' ? ' 🧠' : ''}${source === 'global' ? '' : ` (from ${source})`}\n`
       );
-      const row = (left, right) => console.log(`  ${left.padEnd(28)}${right}`);
-      row(`${cmd} off`, 'nothing injected, nothing checked');
-      row(`${cmd} normal`, 'plain voice, answer first, no fuss');
-      row(`${cmd} cte`, 'same voice at twelve — short, blunt');
-      row(statsCmd, 'token and drift report');
-      if (source === 'global') row(`${cmd} cte --project`, 'pin this project only');
+      const rows = [
+        [`${cmd} off`, 'nothing injected, nothing checked'],
+        [`${cmd} normal`, 'plain voice, answer first, no fuss'],
+        [`${cmd} cte`, 'same voice at twelve — short, blunt'],
+        [statsCmd, 'token and drift report'],
+      ];
+      if (source === 'global') rows.push([`${cmd} cte --project`, 'pin this project only']);
+      // Width from the longest label, since the plugin prefix makes them longer.
+      const width = Math.max(...rows.map(([left]) => left.length)) + 2;
+      for (const [left, right] of rows) console.log(`  ${left.padEnd(width)}${right}`);
       return;
     }
 
