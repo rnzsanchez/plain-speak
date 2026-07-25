@@ -36,6 +36,34 @@ npx plain-speak install --codex
 npx plain-speak uninstall          # puts settings back
 ```
 
+## Commands
+
+In a Claude Code or Codex session:
+
+| Command | What it does |
+|---|---|
+| `/plain-speak-stats` | The report below. Never runs on its own — you invoke it. |
+| `plain-speak cte` | Switch to caveman mode mid-conversation. |
+| `plain-speak normal` | Back to the base voice. |
+| `plain-speak off` | Stop injecting and stop checking. |
+
+The switch phrases are typed as ordinary text, not slash commands, and they are the
+only thing plain-speak ever prints to you.
+
+In a shell:
+
+| Command | What it does |
+|---|---|
+| `npx plain-speak install` | Wire up hooks, badge and the stats command. `--claude` / `--codex` to pick one. |
+| `npx plain-speak uninstall` | Remove everything it added; your settings go back. |
+| `plain-speak mode` | Print the current mode. |
+| `plain-speak mode cte` | Set the mode. `off`, `normal`, `cte` (`max` also means `cte`). |
+| `plain-speak badge` | Print the statusline badge. |
+| `plain-speak stats` | The report, for the most recent session. |
+| `plain-speak doctor` | Check what is wired and what is missing. |
+| `node bench/run.mjs --dry-run` | Show the benchmark plan and cost without calling anything. |
+| `node bench/report.mjs --write` | Build the results table and feed the savings figure. |
+
 ## Modes
 
 | Mode | Voice |
@@ -69,7 +97,10 @@ The badge shows which one is live:
 
 ## The hygiene check
 
-Runs on every reply. No model call, no tokens, nothing printed.
+Runs on every reply. No model call, no tokens, and **you never see it**. The
+score, the verdict and the reinjected rules all go to the model with
+`suppressOutput`, so nothing lands in your transcript. The only thing plain-speak
+ever shows you is a one-line confirmation when you switch mode yourself.
 
 It scores tone, not length — a long, complete answer is fine; a fussy one is not.
 Each hit is a point, and the mode's threshold decides when the points mean drift.
@@ -132,6 +163,31 @@ measure this: the rules are injected once and cache-read afterwards, so one-shot
 sessions make cache-creation dominate the bill and hide the difference.
 
 Results land in `bench/results/`. `RESULTS.md` has the current numbers.
+
+## What it costs you
+
+Worth knowing before you install.
+
+| Downside | Detail |
+|---|---|
+| It edits your settings | `~/.claude/settings.json` and `~/.codex/hooks.json`. A `.plain-speak-backup` copy is written first, and `uninstall` puts them back. |
+| It removes one existing hook | Only a hand-rolled `cat ~/.claude/response-rules.md` hook, which this replaces. It is named in the install output. Nothing else is touched. |
+| Three node processes per turn | Roughly 40–60 ms each. Unnoticeable next to a model call, but it is not zero. |
+| The badge runs constantly | The statusline is re-rendered as you type. That is why it is bash and reads one small file. |
+| The check is a heuristic | It scores phrasing. It will occasionally miss a fussy reply, and occasionally flag a reply that had to use a long sentence — `cte` more than `normal`, because `cte` trips on a single hit. |
+| Terser is not always better | A shorter answer can leave out context you wanted. `cte` especially. If that bites, use `normal`, or ask for detail and the check stands down. |
+| The mode is global | One setting across every project and session. A benchmark run changes it temporarily and restores it on exit. |
+| Codex asks for trust | Hooks must be trusted on first run. The installer tells you rather than bypassing the prompt. |
+| Node 18+ required | No dependencies, but node has to be on `PATH` for the hooks to run. |
+| Uninstall keeps your data | Your mode and `state.json` stay behind. Delete `~/.claude/plain-speak/` to be rid of it. |
+
+It stores counters only — turn counts, drift trips, reinjections. No prompt text
+and no reply text is ever written to disk.
+
+It also stays out of the way of everything else you have installed: it only ever
+adds or removes hook entries whose command contains `plain-speak`, it prepends to
+your statusline instead of replacing it, and its one command is namespaced and
+marked so the model can never invoke it on its own.
 
 ## How it works
 
