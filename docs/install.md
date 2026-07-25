@@ -80,13 +80,8 @@ at any time, so the hooks cannot point at it.
 
 ## The badge
 
-```
-[PLAIN-SPEAK]           normal
-[PLAIN-SPEAK 🧠 CTE]    cte
-                        off — prints nothing
-```
-
-`plain-speak badge` prints it.
+The badge shows the active mode and is on whenever plain-speak is. Switching to `off`
+hides it, since there is nothing to report.
 
 The installer **does not touch a statusline you already have.** Put the badge where
 your own statusline wants it, or pass `--statusline` to have it prepended:

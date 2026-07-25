@@ -75,8 +75,8 @@ PLAIN_SPEAK_MAX_RETRIES=3 claude   # stop after three, then leave it alone
 
 It is a heuristic on phrasing, so it will occasionally miss a fussy reply and
 occasionally flag one that genuinely needed a long sentence. `cte` more than
-`normal`, because `cte` trips on a single hit. The budget and the cooldown exist so
-that a false positive costs you one reinjection, not a nagging session.
+`normal`, because `cte` trips on a single hit. The cooldown exists so that a false
+positive costs you one reinjection, not a run of them.
 
 ## Tuning it
 
