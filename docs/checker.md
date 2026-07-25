@@ -77,6 +77,14 @@ PLAIN_SPEAK_BACKOFF_AFTER=1 claude   # ease off almost immediately
 PLAIN_SPEAK_MAX_RETRIES=3 claude     # a hard ceiling instead
 ```
 
+## What it costs to run
+
+**No tokens at all** — there is no model call anywhere in it.
+
+In wall clock, measured on an M-series Mac: the `Stop` hook that does the checking
+takes 55 ms end to end, and a bare `node -e ''` costs 76 ms on the same machine. The
+scan itself is lost inside interpreter startup.
+
 ## Where it can be wrong
 
 It is a heuristic on phrasing, so it will occasionally miss a fussy reply and

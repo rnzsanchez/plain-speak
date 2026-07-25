@@ -77,6 +77,22 @@ on Codex.
 - **`bench/run.mjs` writes the live mode flag** and restores it on exit. Keep the
   restore path intact.
 
+## Codex benchmark traps
+
+Both of these cost a full run of silent zeros before they were found:
+
+- **`stdio` stdin must be `'ignore'` for `codex exec`.** With an inherited pipe it
+  treats stdin as extra prompt input, prints "Reading additional input from stdin…"
+  and blocks until EOF.
+- **`codex exec --json` is not the session-file format.** Usage arrives on a
+  `turn.completed` event as `usage: {input_tokens, cached_input_tokens, output_tokens,
+  reasoning_output_tokens}`, and the id for `exec resume` on `thread.started`. The
+  `token_count` / `payload.info.last_token_usage` shape only exists in
+  `~/.codex/sessions/*.jsonl`.
+- **`--skip-git-repo-check` is required** or Codex refuses to run outside a repo.
+- `run.mjs` refuses to save a result with zero output tokens. Keep that: a zero that
+  gets written to disk reads as "measured" forever after.
+
 ## Benchmark honesty
 
 Every benchmark session is multi-turn. One-shot sessions make cache-creation

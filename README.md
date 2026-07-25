@@ -133,7 +133,7 @@ This session
   holding      ████████░░  83%   5 of 6 turns clean
   reinjections 2
   output       4,180 tokens over 12 messages · 348 each
-  saved        ██░░░░░░░░  18%   ~918 tokens vs rules off
+  saved        ████░░░░░░  45%   ~3,420 tokens vs rules off
   last drift   filler: "certainly"; corporate word: "leverage"
 
 Lifetime
@@ -150,10 +150,10 @@ once a benchmark has run for that model — no data, no figure.
 
 ## Before you install
 
-It replaces nothing — a clean machine and one already full of plugins end up the
-same. What it does cost you: the npx route adds hook entries to your settings, three
-short node processes run per turn, and the checker is a heuristic that will sometimes
-be wrong.
+It replaces nothing — a clean machine and one already full of plugins end up the same.
+What it costs: the npx route adds hook entries to your settings, two node starts per
+turn (~135 ms, nearly all of it interpreter startup), and a heuristic checker that will
+sometimes be wrong. On small models the saving can vanish entirely.
 
 → **[The honest downsides, in full](./docs/tradeoffs.md)**
 

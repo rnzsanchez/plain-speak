@@ -78,6 +78,21 @@ hooks.
 The runtime copy is not optional: `npx` runs from a temp cache that can be pruned
 at any time, so the hooks cannot point at it.
 
+## Choosing a mode per project
+
+The global mode lives in `~/.claude/plain-speak/mode`. Two things override it:
+
+| Precedence | Where |
+|---|---|
+| 1 | `PLAIN_SPEAK_MODE=cte` — one shell only |
+| 2 | `.plain-speak-mode` in the working directory — one project only |
+| 3 | the global setting |
+
+Pin a project from inside a session with `/plain-speak:mode cte --project`, or write the
+file yourself. `/plain-speak:mode` reports which of the three is in force, so a pin is
+never a mystery. Commit the file to share the choice, or add it to `.gitignore` to keep
+it yours.
+
 ## The badge
 
 The badge shows the active mode and is on whenever plain-speak is. Switching to `off`
@@ -105,10 +120,13 @@ a real check and it is yours to answer.
 npx github:rnzsanchez/plain-speak uninstall            # both tools
 npx github:rnzsanchez/plain-speak uninstall --claude   # leave Codex working
 npx github:rnzsanchez/plain-speak uninstall --codex
+npx github:rnzsanchez/plain-speak uninstall --purge    # and delete the mode and stats
 ```
 
 Removes the hooks, the commands, the badge wiring and the runtime. Removing one tool
-keeps the shared runtime in place, so the other tool keeps working.
+keeps the shared runtime in place, so the other tool keeps working. Without `--purge`
+your mode and `state.json` are left behind on purpose, so a reinstall keeps your
+history.
 
 **Running both routes at once double-injects.** If you install the plugin and you
 already ran the npx installer for Claude Code, drop the npx side with
