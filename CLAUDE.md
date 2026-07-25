@@ -14,7 +14,7 @@ benchmark proves the cost.
 
 ```sh
 npm test                          # node --test, drift + budget unit tests
-node bin/cli.js doctor            # is the local install wired
+node bin/cli.js doctor            # is the local install wired (no slash command — deliberate)
 node bin/cli.js stats             # report for the most recent session
 node bench/run.mjs --dry-run      # benchmark plan, no API calls
 node bench/report.mjs --write     # results table, and feed src/savings.json
@@ -31,6 +31,9 @@ node bench/report.mjs --write     # results table, and feed src/savings.json
 | `src/hooks/*.js` | `SessionStart` injects once, `UserPromptSubmit` usually injects nothing, `Stop` scores and records. |
 | `src/install/*.js` | Settings patching for each tool; `shared.js` holds what both need. |
 | `modes/*.md` | The rule text. `normal` is the base voice, `cte` is the same voice at twelve. |
+| `.claude-plugin/`, `hooks/` | Plugin + marketplace manifests. A plugin install needs no `settings.json` edits and no runtime copy, because `${CLAUDE_PLUGIN_ROOT}` is already stable. |
+| `skills/` | Two commands: `/plain-speak` (status and mode switch) and `/plain-speak-stats`. |
+| `docs/` | Install, checker, benchmark, tradeoffs. The README links out rather than growing. |
 
 Claude Code and Codex fire the same three events with near-identical payloads, so
 one set of hook scripts serves both. `src/hooks/lib.js` normalizes the one
@@ -52,6 +55,11 @@ on Codex.
   cooldown compares against `turns - 1`. Off-by-one here means it nags every turn.
 - **Only walls count as prose paragraphs** (2+ sentences and 25+ words). Counting
   every prose block made `cte` flag replies as short as "Done."
+- **The badge script must keep its `*-statusline.sh` name.** Statuslines that render
+  plugin badges find it by globbing that pattern under the plugin's install path.
+  Renaming it makes the badge silently vanish for plugin users.
+- **The installer never touches a statusline that already exists** unless
+  `--statusline` is passed. Rearranging someone's status bar is not its business.
 - **The statusline is bash on purpose.** It runs on every keystroke; node's
   startup is too slow. It also refuses symlinks and strips control bytes, because
   its input file gets rendered straight to the terminal.
