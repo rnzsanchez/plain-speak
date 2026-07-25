@@ -1,0 +1,35 @@
+{
+  "name": "plain-speak",
+  "version": "2.0.0",
+  "description": "Terse-response modes for Claude Code and Codex, with an active hygiene checker that reinjects the rules only when the model drifts.",
+  "license": "MIT",
+  "author": "Renz Sanchez",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rnzsanchez/plain-speak.git"
+  },
+  "bin": {
+    "plain-speak": "bin/cli.js"
+  },
+  "files": [
+    "bin/",
+    "src/",
+    "modes/",
+    "skills/",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "test": "node --test"
+  },
+  "keywords": [
+    "claude-code",
+    "codex",
+    "hooks",
+    "prompt",
+    "tokens"
+  ]
+}
