@@ -5,7 +5,15 @@
 const fs = require('fs');
 const path = require('path');
 const state = require('../state');
-const { copyRuntime, runtimeDir, HOOK_EVENTS, isOurs, readJson, writeJson } = require('./shared');
+const {
+  copyRuntime,
+  runtimeDir,
+  HOOK_EVENTS,
+  isOurs,
+  isLegacy,
+  readJson,
+  writeJson,
+} = require('./shared');
 
 const settingsPath = () => path.join(state.claudeDir(), 'settings.json');
 const skillDir = () => path.join(state.claudeDir(), 'skills', 'plain-speak-stats');
@@ -29,14 +37,22 @@ function install() {
   const settings = readJson(settingsPath(), {});
   settings.hooks = settings.hooks || {};
 
+  const removed = [];
   for (const [event, script] of Object.entries(HOOK_EVENTS)) {
     const command = `node "${path.join(dir, 'src', 'hooks', script)}"`;
-    // Drop our own entries and any v1 `cat ~/.claude/response-rules.md` hook, so
-    // reinstalling never stacks duplicates and the old always-on rules stop firing.
+    // Drop our own entries so reinstalling never stacks duplicates, and the v1
+    // response-rules hook this replaces. Every other hook is untouched.
     const kept = (settings.hooks[event] || [])
       .map((group) => ({
         ...group,
-        hooks: (group.hooks || []).filter((h) => !isOurs(h.command)),
+        hooks: (group.hooks || []).filter((h) => {
+          if (isOurs(h.command)) return false;
+          if (isLegacy(h.command)) {
+            removed.push(`${event}: ${h.command}`);
+            return false;
+          }
+          return true;
+        }),
       }))
       .filter((group) => group.hooks.length > 0);
     settings.hooks[event] = [...kept, { hooks: [{ type: 'command', command }] }];
@@ -58,6 +74,8 @@ function install() {
 
   console.log(`Claude Code: hooks + badge wired, runtime at ${dir}`);
   console.log('  /plain-speak-stats installed');
+  console.log(`  settings backed up to ${settingsPath()}.plain-speak-backup`);
+  for (const entry of removed) console.log(`  removed superseded hook — ${entry}`);
 }
 
 function uninstall() {

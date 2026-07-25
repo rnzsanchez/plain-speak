@@ -26,10 +26,17 @@ function copyRuntime() {
   return dir;
 }
 
-// Matches our own hooks and the v1 `cat ~/.claude/response-rules.md` hook this
-// release replaces.
+// Only ever our own entries. Everything else in someone's config — other
+// plugins, other hooks, their statusline — is left exactly as it was.
 function isOurs(command) {
-  return typeof command === 'string' && /plain-speak|response-rules\.md/.test(command);
+  return typeof command === 'string' && command.includes('plain-speak');
+}
+
+// The one exception: the hand-rolled `cat ~/.claude/response-rules.md` hook that
+// this package replaces. Removing it is announced, never silent, and the settings
+// backup is written first.
+function isLegacy(command) {
+  return typeof command === 'string' && /response-rules\.md/.test(command);
 }
 
 function readJson(file, fallback) {
@@ -48,4 +55,13 @@ function writeJson(file, data) {
   fs.writeFileSync(file, `${JSON.stringify(data, null, 2)}\n`);
 }
 
-module.exports = { PKG_ROOT, HOOK_EVENTS, runtimeDir, copyRuntime, isOurs, readJson, writeJson };
+module.exports = {
+  PKG_ROOT,
+  HOOK_EVENTS,
+  runtimeDir,
+  copyRuntime,
+  isOurs,
+  isLegacy,
+  readJson,
+  writeJson,
+};
