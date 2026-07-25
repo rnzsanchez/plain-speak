@@ -2,10 +2,15 @@
 
 # plain-speak
 
-### Rules that check themselves.
+### Answers you can actually read.
 
-Terse-response modes for **Claude Code** and **Codex**, with a silent checker that
-reads every reply and puts the rules back **only when the model drifts.**
+For **Claude Code** and **Codex**. The point is comprehension: an answer that leads with
+the answer, in plain words, without the jargon and the padding you have to wade through
+to find it. A silent checker reads every reply and puts the rules back **only when the
+model drifts.**
+
+Shorter replies cost fewer tokens, so it usually saves money too. That is a side effect,
+not the goal — a reply you have to read twice is expensive at any token count.
 
 *This README is written in `normal` mode. It should read like the thing it sells.*
 
@@ -202,7 +207,7 @@ eightfold. No benchmark for your model, no figure at all.
 
 ---
 
-## Does it actually save tokens?
+## The side effect: does it save tokens?
 
 Sometimes. Measured cut in output tokens against `off`, 3-turn sessions, `node
 bench/run.mjs` — Claude models through `claude -p`, GPT models through `codex exec`. Opus
@@ -225,6 +230,11 @@ gpt-5.4-mini           │█              7%    ░░░░│             −
 
 It works on the large Claude models, and only there. On Haiku it barely registers. On GPT
 models `normal` made five of six *longer*.
+
+A model that measures badly here can still be worth running in `normal`: the rules are
+there to make the reply readable, and a readable reply that costs the same is still the
+better reply. Read the sample replies at the top and judge those.
+
 
 Repetition matters: Opus `cte` first measured 52% on one run and 29% on the median of
 five. Assume every single-run row carries that much doubt, and re-run your own model
