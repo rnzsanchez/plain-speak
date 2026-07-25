@@ -34,6 +34,7 @@ output-length column is not.
 | `--models a,b` | all six: three Claude, three Codex |
 | `--modes off,normal,cte` | all three |
 | `--turns N` | 3 |
+| `--repeat N` | 1 — runs each cell N times and reports the median |
 | `--prompts <file>` | `bench/prompts.txt`, one per line |
 | `--out <dir>` | `bench/results/` |
 | `--dry-run` | show the plan and exit |
@@ -44,6 +45,15 @@ back on exit — including on Ctrl-C, though not if the process is killed outrig
 Benchmark sessions run with the hooks live, because that is exactly what is being
 measured, but they set `PLAIN_SPEAK_BENCH=1` so their dozens of throwaway sessions
 stay out of your lifetime stats.
+
+## How much to trust one run
+
+Model output length varies between identical calls, so a single 3-turn run per cell is
+a signal, not a measurement. The numbers in [RESULTS.md](../RESULTS.md) say how many
+runs and turns produced them; treat a difference smaller than about 10 percentage
+points as noise unless `--repeat` was used.
+
+`--repeat 5` costs five times as much and reports the median of the five.
 
 ## What gets recorded
 

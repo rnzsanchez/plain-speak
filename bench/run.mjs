@@ -9,6 +9,7 @@
 //   node bench/run.mjs --dry-run
 //   node bench/run.mjs --models claude-haiku-4-5,gpt-5.4-mini --turns 3
 //   node bench/run.mjs --modes normal,cte --prompts bench/prompts.txt
+//   node bench/run.mjs --models claude-opus-5 --repeat 5   (median of 5, less noise)
 
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
@@ -32,6 +33,9 @@ const list = (v) => String(v).split(',').map((s) => s.trim()).filter(Boolean);
 const models = list(flag('models', [...CLAUDE_MODELS, ...CODEX_MODELS].join(',')));
 const modes = list(flag('modes', 'off,normal,cte'));
 const turns = Number(flag('turns', 3));
+// One run per cell is noisy: model output length varies between identical calls.
+// --repeat runs each cell several times and reports the median.
+const repeat = Math.max(1, Number(flag('repeat', 1)));
 const promptFile = flag('prompts', path.join(import.meta.dirname, 'prompts.txt'));
 const outDir = flag('out', path.join(import.meta.dirname, 'results'));
 
@@ -148,7 +152,9 @@ function session(model, mode) {
 const plan = models.flatMap((m) => modes.map((mode) => ({ model: m, mode })));
 
 if (has('dry-run')) {
-  console.log(`${plan.length} sessions × ${prompts.length} turns = ${plan.length * prompts.length} calls`);
+  console.log(
+    `${plan.length} cells × ${repeat} run${repeat === 1 ? '' : 's'} × ${prompts.length} turns = ${plan.length * repeat * prompts.length} calls`
+  );
   console.log(`models: ${models.join(', ')}`);
   console.log(`modes:  ${modes.join(', ')}`);
   console.log('\nprompts:');
@@ -168,10 +174,27 @@ process.on('SIGINT', () => process.exit(130));
 fs.mkdirSync(outDir, { recursive: true });
 const stamp = new Date().toISOString().replace(/[:.]/g, '-');
 
+const median = (xs) => {
+  const sorted = [...xs].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 ? sorted[mid] : Math.round((sorted[mid - 1] + sorted[mid]) / 2);
+};
+
 for (const { model, mode } of plan) {
   console.log(`\n${model} · ${mode}`);
   try {
-    const result = session(model, mode);
+    const runs = [];
+    for (let i = 0; i < repeat; i += 1) {
+      if (repeat > 1) console.log(`  run ${i + 1}/${repeat}`);
+      runs.push(session(model, mode));
+    }
+    const result = runs[0];
+    if (repeat > 1) {
+      result.runs = runs.length;
+      result.outputPerTurnRuns = runs.map((x) => x.outputPerTurn);
+      result.outputPerTurn = median(result.outputPerTurnRuns);
+      result.outputTokens = median(runs.map((x) => x.outputTokens));
+    }
     if (!result.outputTokens) throw new Error('zero output tokens — refusing to save a bogus result');
     const file = path.join(outDir, `${stamp}-${model}-${mode}.json`);
     fs.writeFileSync(file, `${JSON.stringify(result, null, 2)}\n`);
