@@ -1,5 +1,14 @@
 # Results
 
+> **These numbers are being replaced.** Every row below was measured with the child
+> process running inside this repo, so it loaded the repo's `CLAUDE.md` as well as the
+> operator's global one — which already asks for short answers. That makes the `off`
+> baseline terser than a default model and the measured cut a floor, not the effect of
+> these rules alone. A five-round re-run on the corrected harness (empty working
+> directory, fresh session per run, mode passed by environment) is in progress; this
+> page updates when it lands. Method and the remaining caveats:
+> [docs/benchmark.md](./docs/benchmark.md).
+
 ## v2 — nine models, three modes
 
 `node bench/run.mjs --turns 3`, 2026-07-25. Each cell is a real multi-turn session of

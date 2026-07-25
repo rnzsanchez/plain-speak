@@ -11,9 +11,8 @@ node bench/report.mjs --write                           # table, and feed the st
 
 Every call is a real API call and costs real money. Start narrow.
 
-**Check your own model before believing the pitch.** The current results say plain-speak
-cuts output 29–48% on Opus 5 and 36–59% on Sonnet 5, roughly nothing on Haiku 4.5, and nothing
-reliable on any GPT model — `normal` made five of six GPT models *longer*. Full table in
+**Check your own model before believing the pitch.** Results are strongly model-dependent
+and the published table says which are medians and which are single runs. Full table in
 [RESULTS.md](../RESULTS.md).
 
 ```sh
@@ -49,12 +48,39 @@ output-length column is not.
 | `--out <dir>` | `bench/results/` |
 | `--dry-run` | show the plan and exit |
 
-The mode flag is global, so a run temporarily changes your live setting and puts it
-back on exit — including on Ctrl-C, though not if the process is killed outright.
+| `--isolated` | off — see below |
 
 Benchmark sessions run with the hooks live, because that is exactly what is being
 measured, but they set `PLAIN_SPEAK_BENCH=1` so their dozens of throwaway sessions
-stay out of your lifetime stats.
+stay out of your lifetime stats. The mode reaches each child as `PLAIN_SPEAK_MODE`,
+which outranks both the global flag and a project pin, so a run never writes your live
+setting and a run you kill cannot leave it wrong.
+
+## What the baseline includes
+
+Every cell is a brand-new session — no cell or repeat resumes another — and every child
+runs from an empty directory, so no project `CLAUDE.md` or `AGENTS.md` is discovered.
+
+What it still inherits is **your own machine**: the global `~/.claude/CLAUDE.md`, your
+installed plugins, and their session-start injections. If your global file already asks
+for short answers, the `off` baseline is not a model without response rules, and the
+measured cut is a floor rather than the effect of these rules alone. A smoke-test call
+during this harness's development replied *"Ready. Ponytail mode active."* — from a
+plugin, inside a benchmark.
+
+`--isolated` removes that: separate `CLAUDE_CONFIG_DIR` and `CODEX_HOME` under
+`~/.plain-speak-bench`, holding nothing but plain-speak. It needs one interactive login
+per home, because **setting `CLAUDE_CONFIG_DIR` at all stops Claude Code reading
+credentials from the OS keychain** — every call then returns "Not logged in" and zero
+tokens. The harness checks for the login and refuses to start without it:
+
+```sh
+CLAUDE_CONFIG_DIR=~/.plain-speak-bench/claude claude      # then /login, then quit
+CODEX_HOME=~/.plain-speak-bench/codex codex login
+node bench/run.mjs --isolated --repeat 5
+```
+
+Codex runs with `-s workspace-write` so its tool access roughly matches `claude -p`.
 
 ## How much to trust one run
 

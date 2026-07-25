@@ -80,8 +80,15 @@ on Codex.
 - **The statusline is bash on purpose.** It runs on every keystroke; node's
   startup is too slow. It also refuses symlinks and strips control bytes, because
   its input file gets rendered straight to the terminal.
-- **`bench/run.mjs` writes the live mode flag** and restores it on exit. Keep the
-  restore path intact.
+- **`bench/run.mjs` passes the mode as `PLAIN_SPEAK_MODE`** and never writes the live
+  flag. It used to write and restore, and a killed run left the operator in whatever mode
+  it had reached. Do not reintroduce that.
+- **Never set `CLAUDE_CONFIG_DIR` for a benchmark child** unless `--isolated` and a real
+  login are in play. Setting it at all — even to its own default path — stops Claude Code
+  reading credentials from the keychain, and every call returns "Not logged in" with zero
+  output tokens, which reads exactly like a measured result.
+- **The default baseline runs under the operator's own config**, so global rules and
+  plugins are inside the `off` arm too. Say so wherever the numbers are published.
 
 ## Codex benchmark traps
 
