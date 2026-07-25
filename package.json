@@ -1,6 +1,6 @@
 {
   "name": "plain-speak",
-  "version": "2.8.0",
+  "version": "2.8.1",
   "description": "Terse-response modes for Claude Code and Codex, with an active hygiene checker that reinjects the rules only when the model drifts.",
   "license": "MIT",
   "author": "Renz Sanchez",

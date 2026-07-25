@@ -1,6 +1,6 @@
 {
   "name": "plain-speak",
-  "version": "2.8.0",
+  "version": "2.8.1",
   "description": "Terse-response modes with a silent checker that reads every reply and reinjects the rules only when the model drifts.",
   "author": {
     "name": "Renz Sanchez",

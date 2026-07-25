@@ -94,7 +94,10 @@ function main() {
         cte: 'No. Breaks other clones. --force-with-lease.',
       };
 
-      console.log(`plain-speak — ${mode}${mode === 'cte' ? ' 🧠' : ''}\n`);
+      // Keep the source when it is not the global setting — a project pin that gives no
+      // sign of itself is a mystery, and that was a documented promise.
+      const from = source === 'global' ? '' : ` (from ${source})`;
+      console.log(`plain-speak — ${mode}${mode === 'cte' ? ' 🧠' : ''}${from}\n`);
       console.log('  "Is it safe to force-push to a shared branch?"\n');
       const width = Math.max(...Object.keys(SAMPLES).map((m) => `${cmd} ${m}`.length)) + 2;
       for (const [m, sample] of Object.entries(SAMPLES)) {
