@@ -6,7 +6,7 @@ Both sides, measured where measurement was possible.
 
 | Upside | Grounding |
 |---|---|
-| Shorter answers on Opus and Sonnet | Measured on 3-turn sessions: Opus 5 cut output 48% (`normal`) and 29% (`cte`), median of 5 runs; Sonnet 5 cut 36% and 59% on a single run. That is the whole of the good news — see the row below. |
+| Shorter answers on every Claude model | Medians of 5 rounds, 3-turn sessions: Opus 5 cuts 55% (`normal`); Sonnet 5 42% and Haiku 4.5 21% (`cte`). The better mode differs per model. That is the whole of the good news — see the row below. |
 | The rules keep working | The point of the thing. Injected once, then re-sent only when a reply stops matching the mode — not on every prompt. |
 | Checking costs no tokens | It is a text scan inside a `Stop` hook. No model call, nothing added to context. |
 | Invisible | Verdicts and reinjections reach the model with `suppressOutput`, so nothing lands in your transcript. Asserted in `test/hooks.test.mjs`. |
@@ -24,7 +24,7 @@ Both sides, measured where measurement was possible.
 | The badge re-renders as you type | Measured at 27 ms, against 25 ms for `bash -c :`. Builtins only, one small file read, so roughly 2 ms is ours. |
 | The checker is a heuristic | It will sometimes miss a fussy reply and sometimes flag one that needed a long sentence — `cte` more, since it trips on a single hit. Quoting a phrase no longer counts as using it, which removed the biggest false-positive source. |
 | Terser is not always better | A short answer can drop context you wanted. `cte` especially. Use `normal`, or ask for detail and the checker stands down. |
-| On most models it does not help | Measured across nine: Haiku 4.5 cut only 10%/5%. On GPT models `normal` made **five of six longer** (−16% to 0%), and `cte` was worse still on the 5.4 pair (−15%, −22%). Only Opus and Sonnet showed a real gain. Check your own model rather than assuming — `node bench/run.mjs --models <yours>`. |
+| On GPT models it does not help | Measured across nine, medians of 5 rounds: every GPT cell landed between −11% and +10%, which is inside the noise of a 3-prompt sample. `normal` still tends to run longer there. Check your own model rather than assuming — `node bench/run.mjs --models <yours> --repeat 5`. |
 | Codex asks for trust | Hooks must be trusted on first run. The installer does not bypass that prompt for you. |
 | A benchmark run changes your live mode | It writes the global mode flag and restores it on exit. While it runs, your own sessions are scored against whatever mode the benchmark is testing. |
 | Node 22+ on `PATH` | No dependencies, but the hooks need node. |

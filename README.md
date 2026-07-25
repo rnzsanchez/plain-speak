@@ -184,8 +184,8 @@ An example report — the shape of the output, with made-up counters:
 ```
 plain-speak — cte
 
-  Saved roughly 11,300 tokens. Cost 1,400 to do it.
-  Rough: 48% comes from a benchmark on claude-opus-5, not from this session.
+  Saved roughly 16,900 tokens. Cost 1,400 to do it.
+  Rough: 55% comes from a benchmark on claude-opus-5, not from this session.
 
 This session
   stayed short   █████████░  9 of 11 replies
@@ -209,36 +209,43 @@ eightfold. No benchmark for your model, no figure at all.
 
 ## The side effect: does it save tokens?
 
-Sometimes. Measured cut in output tokens against `off`, 3-turn sessions, `node
-bench/run.mjs` — Claude models through `claude -p`, GPT models through `codex exec`. Opus
-is the median of 5 runs; every other row is a single run and moves under repetition. Raw
-per-run JSON is in [`bench/results/`](./bench/results):
+On Claude models, yes. Median of **5 rounds** per cell, 3-turn sessions, `node
+bench/run.mjs --repeat 5` — Claude through `claude -p`, GPT through `codex exec`. 135
+sessions, 405 calls. Raw per-run JSON is in [`bench/results/`](./bench/results):
 
 ```
                     normal                      cte
               longer ← 0 → shorter      longer ← 0 → shorter
-claude-opus-5          │██████████    48%        │██████        29%
-claude-sonnet-5        │███████       36%        │████████████  59%
-claude-haiku-4-5       │██            10%        │█              5%
-gpt-5.6-sol         ░░░│             −16%        │██            10%
-gpt-5.6-terra         ░│              −4%        │█              4%
-gpt-5.6-luna        ░░░│             −15%        │               0%
-gpt-5.5                │               0%        │█              6%
-gpt-5.4               ░│              −5%     ░░░│             −15%
-gpt-5.4-mini           │█              7%    ░░░░│             −22%
+claude-opus-5          │███████████   55%        │█████████     47%
+claude-sonnet-5        │████          20%        │████████      42%
+claude-haiku-4-5       │█              7%        │████          21%
+gpt-5.6-terra          │██             9%        │██            10%
+gpt-5.6-sol            │              −2%        │██             9%
+gpt-5.6-luna         ░░│             −11%        │               1%
+gpt-5.5                │              −1%       ░│              −7%
+gpt-5.4               ░│              −6%        │              −2%
+gpt-5.4-mini           │              −1%      ░░│              −8%
 ```
 
-It works on the large Claude models, and only there. On Haiku it barely registers. On GPT
-models `normal` made five of six *longer*.
+**Every Claude model gains. No GPT model reliably does.**
 
-A model that measures badly here can still be worth running in `normal`: the rules are
-there to make the reply readable, and a readable reply that costs the same is still the
-better reply. Read the sample replies at the top and judge those.
+The better mode differs per model, and it is not guessable:
 
+| Your model | Use | Because |
+|---|---|---|
+| claude-opus-5 | `normal` | 55%, against `cte`'s 47% |
+| claude-sonnet-5 | `cte` | 42%, against `normal`'s 20% |
+| claude-haiku-4-5 | `cte` | 21%, against `normal`'s 7% |
+| any GPT model | either, for the readability | −11% to +10%, all of it inside the noise |
 
-Repetition matters: Opus `cte` first measured 52% on one run and 29% on the median of
-five. Assume every single-run row carries that much doubt, and re-run your own model
-before believing any of it.
+A model that measures badly can still be worth running: the rules exist to make the reply
+readable, and a readable reply that costs the same is still the better reply. Read the
+sample replies at the top and judge those.
+
+Earlier versions of this table ran the benchmark inside this repo, so the `off` baseline
+inherited its `CLAUDE.md` and was already terse — Opus `off` reads 865 tokens per turn on
+a clean baseline against 618 on the old one. Several numbers moved more than 20 points
+when that was fixed. [The full story](./RESULTS.md).
 
 → **[Method and caveats](./docs/benchmark.md)** · **[Full numbers](./RESULTS.md)**
 

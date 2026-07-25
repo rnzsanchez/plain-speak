@@ -11,9 +11,9 @@ node bench/report.mjs --write                           # table, and feed the st
 
 Every call is a real API call and costs real money. Start narrow.
 
-**Check your own model before believing the pitch.** Results are strongly model-dependent
-and the published table says which are medians and which are single runs. Full table in
-[RESULTS.md](../RESULTS.md).
+**Check your own model before believing the pitch.** Results are strongly model-dependent,
+and so is the better mode: Opus wants `normal`, Sonnet and Haiku want `cte`, and no GPT
+model shows a reliable gain either way. Full table in [RESULTS.md](../RESULTS.md).
 
 ```sh
 node bench/run.mjs --models <your-model> --repeat 5   # the only figure that counts

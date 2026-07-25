@@ -121,11 +121,15 @@ The line says "roughly" and names where the percentage came from, because the sp
 apportioned by character size (usage is per message, not per block) and the benchmark
 measured a different kind of turn.
 
-The results are strongly model-dependent and the docs must keep saying so: on Opus 5
-`normal` cuts 48% and `cte` 29% (median of 5 runs), Sonnet 5 cut 36%/59% on one run,
-~10% or less on Haiku 4.5, and nothing reliable on GPT — `normal` made five of six GPT
-models longer. Do not reintroduce a single headline number. One run is not a result:
-Opus `cte` read 52% on a single run and 29% over five.
+The results are strongly model-dependent and the docs must keep saying so. v3, medians
+of 5 rounds on a clean baseline: Opus 5 `normal` 55% / `cte` 47%; Sonnet 5 20% / 42%;
+Haiku 4.5 7% / 21%; every GPT model between −11% and +10%, which is noise. The better
+mode differs per model — do not describe `cte` as "more savings". Do not reintroduce a
+single headline number.
+
+One run is not a result, and neither is a contaminated baseline. Opus `cte` read 52% on
+one run and 29% over five; Opus `off` read 618 tokens per turn measured inside this repo
+and 865 from an empty directory.
 
 ## Memory
 

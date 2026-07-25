@@ -1,75 +1,103 @@
 # Results
 
-> **These numbers are being replaced.** Every row below was measured with the child
-> process running inside this repo, so it loaded the repo's `CLAUDE.md` as well as the
-> operator's global one — which already asks for short answers. That makes the `off`
-> baseline terser than a default model and the measured cut a floor, not the effect of
-> these rules alone. A five-round re-run on the corrected harness (empty working
-> directory, fresh session per run, mode passed by environment) is in progress; this
-> page updates when it lands. Method and the remaining caveats:
-> [docs/benchmark.md](./docs/benchmark.md).
+## v3 — nine models, three modes, five rounds each
 
-## v2 — nine models, three modes
+`node bench/run.mjs --repeat 5`, 2026-07-26. Every cell is the **median of 5 rounds**.
+Output tokens per turn, and the cut against the same model with rules off. Negative means
+the replies got **longer** with the rules on.
 
-`node bench/run.mjs --turns 3`, 2026-07-25. Each cell is a real multi-turn session of
-3 prompts from `bench/prompts.txt`. Output tokens per turn, and the cut against the same
-model with rules off. Negative means the replies got **longer** with the rules on.
+| Model | off | `normal` | cut | `cte` | cut | better mode |
+|---|---:|---:|---:|---:|---:|---|
+| claude-opus-5 | 865 | 393 | **55%** | 456 | 47% | `normal` |
+| claude-sonnet-5 | 260 | 208 | 20% | 152 | **42%** | `cte` |
+| claude-haiku-4-5 | 484 | 449 | 7% | 380 | **21%** | `cte` |
+| gpt-5.6-terra | 309 | 280 | 9% | 279 | 10% | either, barely |
+| gpt-5.6-sol | 365 | 374 | −2% | 332 | 9% | `cte`, barely |
+| gpt-5.6-luna | 401 | 445 | **−11%** | 395 | 1% | neither |
+| gpt-5.5 | 317 | 320 | −1% | 339 | −7% | neither |
+| gpt-5.4 | 404 | 430 | −6% | 412 | −2% | neither |
+| gpt-5.4-mini | 762 | 772 | −1% | 823 | −8% | neither |
 
-**Opus 5 is the median of 5 runs** (`--repeat 5`, 2026-07-26). Every other row is still a
-single run, so treat those as indicative only — the Opus re-run moved `cte` by 23 points.
+## How this was measured
 
-| Model | off | `normal` | cut | `cte` | cut |
-|---|---:|---:|---:|---:|---:|
-| claude-opus-5 · 5 runs | 618 | 322 | **48%** | 437 | 29% |
-| claude-sonnet-5 | 237 | 152 | **36%** | 97 | **59%** |
-| claude-haiku-4-5 | 535 | 483 | 10% | 507 | 5% |
-| gpt-5.6-sol | 340 | 393 | **−16%** | 306 | 10% |
-| gpt-5.6-terra | 281 | 293 | −4% | 271 | 4% |
-| gpt-5.6-luna | 449 | 515 | **−15%** | 449 | 0% |
-| gpt-5.5 | 335 | 334 | 0% | 314 | 6% |
-| gpt-5.4 | 404 | 426 | −5% | 463 | **−15%** |
-| gpt-5.4-mini | 635 | 588 | 7% | 772 | **−22%** |
+A **session** is one `(model, mode, round)`. Nothing is shared across those three:
+
+| Boundary | New session |
+|---|---|
+| Tool — `claude -p` vs `codex exec` | Yes, separate processes throughout |
+| Model | Yes |
+| Mode — `off`, `normal`, `cte` | Yes |
+| Round — each of the 5 repeats | Yes |
+| Turn, within one round | **No** — the 3 prompts share the session |
+
+Turn 1 opens the session; turns 2 and 3 resume it. The rules are injected once at session
+start and cache-read after, which is how they behave in use. That makes this run **135
+sessions and 405 calls** per full sweep.
+
+Each child runs from an **empty directory**, so no project `CLAUDE.md` or `AGENTS.md` is
+read, and the mode reaches it as `PLAIN_SPEAK_MODE` rather than by writing the global
+flag. Hooks are live — they are the thing being measured — with `PLAIN_SPEAK_BENCH=1` so
+the throwaway sessions stay out of the operator's own stats.
+
+**What it still inherits:** the operator's global `~/.claude/CLAUDE.md` and installed
+plugins. Setting `CLAUDE_CONFIG_DIR` to isolate that stops Claude Code reading credentials
+from the keychain, so full isolation needs its own login — `bench/run.mjs --isolated`,
+documented in [docs/benchmark.md](./docs/benchmark.md). Every cut below is therefore a
+**floor**: the `off` arm is already somewhat terse.
 
 ## What this shows
 
-**It works on the large Claude models, and only there.** Opus 5 and Sonnet 5 both cut
-output substantially. Nothing else came close.
+**Every Claude model gains; every GPT model roughly doesn't.** That split is the one
+durable finding across both rounds of measurement.
 
-**On Opus, `normal` beats `cte`.** The first pass had `cte` ahead at 52% against 45%.
-Repeated five times, `normal` holds 48% while `cte` falls to 29% — the single run was
-noise. `cte` writes shorter sentences but adds structure, headings and lists, and on this
-model that costs more than the terse phrasing saves. Every single-run row in this table
-is subject to the same doubt.
+**The better mode differs by model, and it is not guessable.** Opus wants `normal` (55%
+against 47%). Sonnet and Haiku want `cte` (42% and 21%, against 20% and 7%). Picking the
+"more extreme" mode costs Opus 8 points and gains Sonnet 22.
 
-**On the Claude small model it barely registers.** Haiku 4.5 landed at 10% and 5% —
-inside the noise of a 3-prompt sample.
+**Haiku was written off too early.** The old table had it at 10%/5% — "barely registers".
+Against a clean baseline `cte` cuts 21%, its best result.
 
-**On GPT models, `normal` consistently backfires.** Five of the six went *up*: −16% on
-gpt-5.6-sol, −15% on gpt-5.6-luna, −5% on gpt-5.4, −4% on gpt-5.6-terra, 0% on gpt-5.5.
-Only gpt-5.4-mini improved, at 7%. Whatever the `normal` ruleset does to a GPT model, it
-is not making it shorter — a plausible reading is that a list of style rules invites
-more structure and more hedging, but this data does not establish why.
+**On GPT, `normal` still tends to backfire**, though far less than the old table claimed:
+−11% on gpt-5.6-luna and −6% on gpt-5.4, against +9% on gpt-5.6-terra. `cte` is mildly
+positive on the 5.6 family (1–10%) and mildly negative on 5.4, 5.5 and 5.4-mini (−2% to
+−8%). Nothing there is worth quoting as a saving.
 
-**`cte` is the better bet on GPT, and still not a win.** It was flat or slightly better
-on the 5.5 and 5.6 family (0% to 10%), and clearly worse on the 5.4 pair (−15%, −22%).
+There is no honest single headline. The defensible claim: **20–55% on Claude models with
+the right mode per model, and no reliable gain on any GPT model.**
 
-So there is no honest single headline. The defensible claim is: **45–59% on Opus and
-Sonnet, roughly nothing on Haiku, and no reliable gain on any GPT model.**
+## What changed from v2, and why the old numbers were wrong
 
-## What this does not show
+The v2 table was measured with the child process running **inside this repo**, so every
+call loaded this repo's `CLAUDE.md` and the operator's global one — which already asks
+for short answers. The `off` arm was therefore not a default model.
 
-- **One run per cell.** Reply length varies between identical calls. Treat anything under
-  about 10 points as noise; the 45–59% figures are large enough to trust as direction,
-  the rest are not. Use `--repeat 5` for numbers worth quoting.
+| | v2 baseline | v3 baseline |
+|---|---:|---:|
+| claude-opus-5, `off`, tokens per turn | 618 | **865** |
+
+Same model, same prompts, 40% longer once the repo's instructions are out of the picture.
+Every v2 cut was measured against an artificially terse baseline, and several moved by
+more than 20 points when it was removed. Two other harness faults were fixed in the same
+pass: a `-s` sandbox flag that `codex exec resume` rejects, which killed every turn after
+the first on Codex, and the run writing the operator's live mode flag, which a killed run
+would leave wrong.
+
+## What this still does not show
+
 - **Three prompts, all general questions.** No code, no tool use, no long context —
-  nothing like a real coding session, which is mostly tool traffic.
+  nothing like a real coding session, which is mostly tool traffic. In a real session
+  the prose these rules govern is often 10–15% of output.
+- **Five rounds is enough to see 20-point effects, not 5-point ones.** Treat anything
+  under about 10 points as noise. `gpt-5.5` at −1% and `gpt-5.4-mini` at −1% mean "no
+  effect", not "slightly worse".
 - **Reasoning tokens.** Codex reports `output_tokens` and `reasoning_output_tokens`
-  separately and this table sums them, because both are billed as output. For the three
-  5.6 models the harness recorded them separately, and the visible-reply cut tracked the
-  billed cut within 3 points — so reasoning is not what is driving the GPT results. The
-  older six runs predate that split and cannot be broken down.
+  separately and this table sums them, because both are billed as output. Where the
+  harness recorded them separately, the visible-reply cut tracked the billed cut within
+  3 points — so reasoning is not what drives the GPT results.
 - **No cost column.** Claude reports a price and Codex does not, and per-session cache
   behaviour dominates the bill either way. Compare tokens, not dollars.
+- **Readability is not measured at all.** The point of these rules is an answer you can
+  read once. Token count is the part that happens to be countable.
 
 ## Session continuity, measured
 
@@ -87,10 +115,10 @@ cost numbers meaningless.
 ## Reproduce
 
 ```sh
-node bench/run.mjs --dry-run                        # plan and cost, no calls
-node bench/run.mjs --turns 3                        # this table
-node bench/run.mjs --models claude-opus-5 --repeat 5 # median of 5, less noise
-node bench/report.mjs --write                       # regenerate, and feed the stats
+node bench/run.mjs --dry-run              # plan and cost, no calls
+node bench/run.mjs --repeat 5             # this table: 135 sessions, 405 calls
+node bench/run.mjs --isolated --repeat 5  # the same, without your global config
+node bench/report.mjs --write             # regenerate, and feed the stats
 ```
 
 Raw per-turn data for every cell is in `bench/results/`.
