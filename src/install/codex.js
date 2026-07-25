@@ -5,7 +5,15 @@
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const { copyRuntime, HOOK_EVENTS, isOurs, readJson, writeJson } = require('./shared');
+const {
+  copyRuntime,
+  copySkills,
+  removeSkills,
+  HOOK_EVENTS,
+  isOurs,
+  readJson,
+  writeJson,
+} = require('./shared');
 
 const codexHome = () => process.env.CODEX_HOME || path.join(os.homedir(), '.codex');
 const hooksPath = () => path.join(codexHome(), 'hooks.json');
@@ -50,8 +58,12 @@ function install() {
 
   writeJson(hooksPath(), config);
   const flipped = enableHooksFeature();
+  const skillsDir = path.join(codexHome(), 'skills');
+  fs.mkdirSync(skillsDir, { recursive: true });
+  const skills = copySkills(skillsDir);
 
   console.log(`Codex: hooks wired at ${hooksPath()}`);
+  console.log(`  commands: ${skills.map((s) => `/${s}`).join(' ')}`);
   if (flipped) console.log('  enabled [features] hooks = true in config.toml');
   // Codex asks the user to trust hook sources on first run. Prompting is the
   // point of that check, so the installer tells you rather than bypassing it.
@@ -68,7 +80,8 @@ function uninstall() {
     if (config.hooks[event].length === 0) delete config.hooks[event];
   }
   writeJson(hooksPath(), config);
-  console.log('Codex: hooks removed ([features] hooks left enabled)');
+  removeSkills(path.join(codexHome(), 'skills'));
+  console.log('Codex: hooks and commands removed ([features] hooks left enabled)');
 }
 
 function doctor() {

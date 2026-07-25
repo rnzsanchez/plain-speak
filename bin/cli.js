@@ -36,7 +36,7 @@ function main() {
       if (both || has('--claude')) claude.install();
       if (both || has('--codex')) codex.install();
       if (!state.readSafe(state.modePath())) state.writeMode('normal');
-      console.log(`\nMode: ${state.readMode()}. Change it with: plain-speak mode cte`);
+      console.log(`\nMode: ${state.readMode()}. Change it in a session: /plain-speak-mode cte`);
       console.log('Restart Claude Code, or run /hooks once, to load the hooks.');
       return;
     }

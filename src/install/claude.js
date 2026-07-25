@@ -1,12 +1,14 @@
 'use strict';
 // Claude Code wiring: three hooks, a badge chained onto whatever statusline is
-// already there, and the /plain-speak-stats skill.
+// already there, and the /plain-speak slash commands.
 
 const fs = require('fs');
 const path = require('path');
 const state = require('../state');
 const {
   copyRuntime,
+  copySkills,
+  removeSkills,
   runtimeDir,
   HOOK_EVENTS,
   isOurs,
@@ -16,21 +18,7 @@ const {
 } = require('./shared');
 
 const settingsPath = () => path.join(state.claudeDir(), 'settings.json');
-const skillDir = () => path.join(state.claudeDir(), 'skills', 'plain-speak-stats');
-
-const SKILL = `---
-name: plain-speak-stats
-description: Token and drift report for plain-speak — this session plus lifetime.
-disable-model-invocation: true
-allowed-tools: Bash
----
-
-Run this and show the output exactly as printed, with no commentary:
-
-\`\`\`sh
-node "$HOME/.claude/plain-speak/bin/cli.js" stats
-\`\`\`
-`;
+const skillsDir = () => path.join(state.claudeDir(), 'skills');
 
 function install() {
   const dir = copyRuntime();
@@ -69,11 +57,11 @@ function install() {
   }
 
   writeJson(settingsPath(), settings);
-  fs.mkdirSync(skillDir(), { recursive: true });
-  fs.writeFileSync(path.join(skillDir(), 'SKILL.md'), SKILL);
+  fs.mkdirSync(skillsDir(), { recursive: true });
+  const skills = copySkills(skillsDir());
 
   console.log(`Claude Code: hooks + badge wired, runtime at ${dir}`);
-  console.log('  /plain-speak-stats installed');
+  console.log(`  commands: ${skills.map((s) => `/${s}`).join(' ')}`);
   console.log(`  settings backed up to ${settingsPath()}.plain-speak-backup`);
   for (const entry of removed) console.log(`  removed superseded hook — ${entry}`);
 }
@@ -99,11 +87,11 @@ function uninstall() {
     }
     writeJson(settingsPath(), settings);
   }
-  fs.rmSync(skillDir(), { recursive: true, force: true });
+  removeSkills(skillsDir());
   fs.rmSync(path.join(runtimeDir(), 'src'), { recursive: true, force: true });
   fs.rmSync(path.join(runtimeDir(), 'bin'), { recursive: true, force: true });
   fs.rmSync(path.join(runtimeDir(), 'modes'), { recursive: true, force: true });
-  console.log('Claude Code: hooks, badge and skill removed (state.json and mode kept)');
+  console.log('Claude Code: hooks, badge and commands removed (state.json and mode kept)');
 }
 
 function doctor() {
@@ -116,7 +104,10 @@ function doctor() {
   }
   const cmd = (settings.statusLine && settings.statusLine.command) || '';
   console.log(`  ${cmd.includes('plain-speak') ? 'ok  ' : 'MISS'} statusline badge`);
-  console.log(`  ${fs.existsSync(path.join(skillDir(), 'SKILL.md')) ? 'ok  ' : 'MISS'} /plain-speak-stats`);
+  for (const name of ['plain-speak', 'plain-speak-mode', 'plain-speak-stats', 'plain-speak-doctor']) {
+    const there = fs.existsSync(path.join(skillsDir(), name, 'SKILL.md'));
+    console.log(`  ${there ? 'ok  ' : 'MISS'} /${name}`);
+  }
   console.log(`  mode: ${state.readMode()}`);
 }
 

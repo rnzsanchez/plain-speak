@@ -26,6 +26,31 @@ function copyRuntime() {
   return dir;
 }
 
+// Slash commands. Every one is namespaced and marked disable-model-invocation, so
+// they only ever run when the user asks for them.
+function copySkills(targetSkillsDir) {
+  const src = path.join(PKG_ROOT, 'skills');
+  const names = fs.readdirSync(src);
+  for (const name of names) {
+    const dest = path.join(targetSkillsDir, name);
+    fs.rmSync(dest, { recursive: true, force: true });
+    fs.cpSync(path.join(src, name), dest, { recursive: true });
+  }
+  return names;
+}
+
+function removeSkills(targetSkillsDir) {
+  let names = [];
+  try {
+    names = fs.readdirSync(targetSkillsDir).filter((n) => n.startsWith('plain-speak'));
+  } catch {
+    return;
+  }
+  for (const name of names) {
+    fs.rmSync(path.join(targetSkillsDir, name), { recursive: true, force: true });
+  }
+}
+
 // Only ever our own entries. Everything else in someone's config — other
 // plugins, other hooks, their statusline — is left exactly as it was.
 function isOurs(command) {
@@ -60,6 +85,8 @@ module.exports = {
   HOOK_EVENTS,
   runtimeDir,
   copyRuntime,
+  copySkills,
+  removeSkills,
   isOurs,
   isLegacy,
   readJson,
