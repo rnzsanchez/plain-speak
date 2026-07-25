@@ -10,6 +10,15 @@ node bench/report.mjs --write                           # table, and feed the st
 
 Every call is a real API call and costs real money. Start narrow.
 
+**Check your own model before believing the pitch.** The current results say plain-speak
+cuts output 45–59% on Opus 5 and Sonnet 5, roughly nothing on Haiku 4.5, and nothing
+reliable on any GPT model — `normal` made five of six GPT models *longer*. Full table in
+[RESULTS.md](../RESULTS.md).
+
+```sh
+node bench/run.mjs --models <your-model> --repeat 5   # the only figure that counts
+```
+
 ## Why sessions, not prompts
 
 Each run is a **real multi-turn session**. That is the only honest way to measure
@@ -31,7 +40,7 @@ output-length column is not.
 
 | Flag | Default |
 |---|---|
-| `--models a,b` | all six: three Claude, three Codex |
+| `--models a,b` | all nine: three Claude, six Codex |
 | `--modes off,normal,cte` | all three |
 | `--turns N` | 3 |
 | `--repeat N` | 1 — runs each cell N times and reports the median |
@@ -57,12 +66,24 @@ points as noise unless `--repeat` was used.
 
 ## What gets recorded
 
-Per turn and per session: output tokens, uncached input, cache read, cache write,
-and cost where the tool reports it. Claude reports a price; Codex does not, so
-compare tokens across tools, not dollars.
+Per turn and per session: output tokens, uncached input, cache read, cache write, and
+cost where the tool reports it. Claude reports a price; Codex does not, so compare
+tokens across tools, not dollars.
+
+For Codex, `output_tokens` and `reasoning_output_tokens` are recorded separately as well
+as summed. The sum is what you are billed; the visible-only figure is the part response
+rules can actually influence. `report.mjs` shows both columns when the data is there —
+the nine-model run has it for the three 5.6 models only, and on those the two tracked
+each other within 3 points, which is what ruled reasoning out as the cause of the GPT
+results.
 
 ## Feeding the stats
 
 `node bench/report.mjs --write` writes `src/savings.json`, which is what puts the
-`saved` line into `/plain-speak-stats`. Until that file has an entry for your model,
-no savings figure is shown at all — an unmeasured number is worse than none.
+`measured` line into the stats command. Until that file has an entry for your model,
+no figure is shown at all — an unmeasured number is worse than none.
+
+That line reports the benchmark percentage and its provenance. It is deliberately not
+multiplied out into "you saved N tokens": the benchmark measures short question-and-
+answer turns, a real session is mostly tool traffic, and scaling one onto the other
+would invent a number.

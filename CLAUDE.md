@@ -105,8 +105,13 @@ Every benchmark session is multi-turn. One-shot sessions make cache-creation
 tokens dominate and hide the output difference — that mistake is why the v1 cost
 numbers in `RESULTS.md` were noise. Don't present cost from a single-turn harness.
 
-`plain-speak stats` shows a savings figure only when `src/savings.json` has an
-entry for that model. No data, no number.
+`plain-speak stats` shows a figure only when `src/savings.json` has an entry for that
+model. No data, no number — and it reports the benchmark percentage with its provenance
+rather than multiplying it across the session's token count, which would be fiction.
+
+The results are strongly model-dependent and the docs must keep saying so: 45–59% on
+Opus 5 and Sonnet 5, ~10% or less on Haiku 4.5, and nothing reliable on GPT — `normal`
+made five of six GPT models longer. Do not reintroduce a single headline number.
 
 ## Commit style
 
