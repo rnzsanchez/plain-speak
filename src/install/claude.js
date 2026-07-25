@@ -12,7 +12,6 @@ const {
   runtimeDir,
   HOOK_EVENTS,
   isOurs,
-  isLegacy,
   readJson,
   writeJson,
 } = require('./shared');
@@ -25,22 +24,14 @@ function install({ chainStatusline = false } = {}) {
   const settings = readJson(settingsPath(), {});
   settings.hooks = settings.hooks || {};
 
-  const removed = [];
   for (const [event, script] of Object.entries(HOOK_EVENTS)) {
     const command = `node "${path.join(dir, 'src', 'hooks', script)}"`;
-    // Drop our own entries so reinstalling never stacks duplicates, and the v1
-    // response-rules hook this replaces. Every other hook is untouched.
+    // Drop only our own entries, so reinstalling never stacks duplicates. Every
+    // other hook on the event is carried through untouched.
     const kept = (settings.hooks[event] || [])
       .map((group) => ({
         ...group,
-        hooks: (group.hooks || []).filter((h) => {
-          if (isOurs(h.command)) return false;
-          if (isLegacy(h.command)) {
-            removed.push(`${event}: ${h.command}`);
-            return false;
-          }
-          return true;
-        }),
+        hooks: (group.hooks || []).filter((h) => !isOurs(h.command)),
       }))
       .filter((group) => group.hooks.length > 0);
     settings.hooks[event] = [...kept, { hooks: [{ type: 'command', command }] }];
@@ -73,7 +64,7 @@ function install({ chainStatusline = false } = {}) {
   console.log(`  commands: ${skills.map((s) => `/${s}`).join(' ')}`);
   console.log(`  ${badgeNote}`);
   console.log(`  settings backed up to ${settingsPath()}.plain-speak-backup`);
-  for (const entry of removed) console.log(`  removed superseded hook — ${entry}`);
+  console.log('  nothing else in your settings was changed');
 }
 
 function uninstall({ keepRuntime = false } = {}) {

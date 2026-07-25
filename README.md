@@ -102,7 +102,7 @@ arrive as `/plain-speak` and `/plain-speak-stats`.
 The badge shows what's live, next to your other plugin badges:
 
 ```
-Opus 5 (1M) | plain-speak · main · [PONYTAIL] · [PLAIN 🧠 CTE]
+Opus 5 (1M) | plain-speak · main · [PONYTAIL] · [PLAIN-SPEAK 🧠 CTE]
 ```
 
 ---
@@ -148,8 +148,10 @@ once a benchmark has run for that model — no data, no figure.
 
 ## Before you install
 
-The npx route edits your settings, three short node processes run per turn, and the
-checker is a heuristic that will sometimes be wrong.
+It replaces nothing — a clean machine and one already full of plugins end up the
+same. What it does cost you: the npx route adds hook entries to your settings, three
+short node processes run per turn, and the checker is a heuristic that will sometimes
+be wrong.
 
 → **[The honest downsides, in full](./docs/tradeoffs.md)**
 

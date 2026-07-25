@@ -66,18 +66,27 @@ install has no namespace to lean on, so they are prefixed on the way in — bare
 | Path | What |
 |---|---|
 | `~/.claude/plain-speak/` | Runtime copy, mode file, `state.json` |
-| `~/.claude/settings.json` | Three hook entries. Backed up to `.plain-speak-backup` first |
+| `~/.claude/settings.json` | Three hook entries, added alongside whatever is already there. Backed up to `.plain-speak-backup` first |
 | `~/.claude/skills/plain-speak*/` | The four slash commands |
 | `~/.codex/hooks.json` | The same three hooks |
 | `~/.codex/config.toml` | `[features] hooks = true`, if not already set |
 | `~/.codex/skills/plain-speak*/` | The four slash commands |
+
+Nothing existing is replaced or removed. Reinstalling is safe and does not duplicate
+hooks.
 
 The runtime copy is not optional: `npx` runs from a temp cache that can be pruned
 at any time, so the hooks cannot point at it.
 
 ## The badge
 
-`plain-speak badge` prints the badge and nothing else when the mode is `off`.
+```
+[PLAIN-SPEAK]           normal
+[PLAIN-SPEAK 🧠 CTE]    cte
+                        off — prints nothing
+```
+
+`plain-speak badge` prints it.
 
 The installer **does not touch a statusline you already have.** Put the badge where
 your own statusline wants it, or pass `--statusline` to have it prepended:

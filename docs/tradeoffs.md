@@ -6,8 +6,7 @@ The honest list.
 
 | Downside | Detail |
 |---|---|
-| It edits your settings | Only with the npx installer: `~/.claude/settings.json`, `~/.codex/hooks.json`. A `.plain-speak-backup` is written first; `uninstall` restores them. The plugin route edits nothing. |
-| It removes one existing hook | Only a hand-rolled `cat ~/.claude/response-rules.md` hook, which this supersedes. Named in the install output. Nothing else is touched. |
+| It adds to your settings | Only with the npx installer: three hook entries in `~/.claude/settings.json` and `~/.codex/hooks.json`. A `.plain-speak-backup` is written first; `uninstall` restores them. The plugin route edits nothing at all. |
 | Three node processes per turn | Roughly 40–60 ms each. Invisible next to a model call, but not zero. |
 | The badge runs constantly | The statusline re-renders as you type. That is why it is bash and reads one small file. |
 | The checker is a heuristic | It will sometimes miss a fussy reply, sometimes flag one that needed a long sentence. See [the checker](./checker.md#where-it-can-be-wrong). |
@@ -25,10 +24,18 @@ disk.** The last 50 sessions are kept; older entries are pruned.
 
 ## Living with your other tools
 
-- It only ever adds or removes hook entries whose command contains `plain-speak`.
+**It replaces nothing.** A clean machine and one already carrying a dozen plugins end
+up in the same place — plain-speak is added alongside whatever is there.
+
+- It only ever adds or removes hook entries whose own command contains `plain-speak`. Every other hook on the same event is carried through untouched.
 - It leaves a statusline you already have exactly as it was, unless you pass `--statusline`.
-- Its four commands are namespaced and marked `disable-model-invocation`, so the model can never trigger them.
+- It does not touch your plugins, permissions, environment, marketplaces, or theme.
+- Its commands are namespaced and marked `disable-model-invocation`, so the model can never trigger them.
 - Installing twice does not stack duplicate hooks.
+
+If you already run your own response-rules hook, plain-speak does **not** remove it.
+Both will fire, which means the rules get injected on every prompt as well as on
+drift — turn your own one off if you want the token saving.
 
 ## Failure behaviour
 

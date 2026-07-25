@@ -65,17 +65,11 @@ function removeSkills(targetSkillsDir) {
   }
 }
 
-// Only ever our own entries. Everything else in someone's config — other
-// plugins, other hooks, their statusline — is left exactly as it was.
+// Only ever our own entries. Installing is purely additive: every other hook, every
+// other plugin, and your statusline are left exactly as they were. Nothing is
+// replaced, so a fresh machine and a fully-loaded one behave the same.
 function isOurs(command) {
   return typeof command === 'string' && command.includes('plain-speak');
-}
-
-// The one exception: the hand-rolled `cat ~/.claude/response-rules.md` hook that
-// this package replaces. Removing it is announced, never silent, and the settings
-// backup is written first.
-function isLegacy(command) {
-  return typeof command === 'string' && /response-rules\.md/.test(command);
 }
 
 function readJson(file, fallback) {
@@ -103,7 +97,6 @@ module.exports = {
   copySkills,
   removeSkills,
   isOurs,
-  isLegacy,
   readJson,
   writeJson,
 };

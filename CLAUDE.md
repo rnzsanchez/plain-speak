@@ -42,6 +42,10 @@ on Codex.
 
 ## Things that will bite you
 
+- **Installing is additive. Keep it that way.** `isOurs()` matches only commands
+  containing `plain-speak`; nothing else is ever filtered out of a user's settings.
+  Do not add "helpfully remove the old thing" logic — a fresh machine and a
+  plugin-loaded one must end up in the same state.
 - **The `Stop` hook must never block or print.** Making the model spend a turn
   being told to be shorter costs more than the drift did.
 - **Hooks must always exit 0.** `lib.run()` swallows everything for that reason.
