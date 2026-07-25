@@ -12,7 +12,7 @@ node bench/report.mjs --write                           # table, and feed the st
 Every call is a real API call and costs real money. Start narrow.
 
 **Check your own model before believing the pitch.** The current results say plain-speak
-cuts output 45–59% on Opus 5 and Sonnet 5, roughly nothing on Haiku 4.5, and nothing
+cuts output 29–48% on Opus 5 and 36–59% on Sonnet 5, roughly nothing on Haiku 4.5, and nothing
 reliable on any GPT model — `normal` made five of six GPT models *longer*. Full table in
 [RESULTS.md](../RESULTS.md).
 

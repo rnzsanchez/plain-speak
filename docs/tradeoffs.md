@@ -6,7 +6,7 @@ Both sides, measured where measurement was possible.
 
 | Upside | Grounding |
 |---|---|
-| Shorter answers on Opus and Sonnet | Measured, one 3-turn session per cell: Opus 5 cut output 45% (`normal`) and 52% (`cte`); Sonnet 5 cut 36% and 59%. That is the whole of the good news — see the row below. |
+| Shorter answers on Opus and Sonnet | Measured on 3-turn sessions: Opus 5 cut output 48% (`normal`) and 29% (`cte`), median of 5 runs; Sonnet 5 cut 36% and 59% on a single run. That is the whole of the good news — see the row below. |
 | The rules keep working | The point of the thing. Injected once, then re-sent only when a reply stops matching the mode — not on every prompt. |
 | Checking costs no tokens | It is a text scan inside a `Stop` hook. No model call, nothing added to context. |
 | Invisible | Verdicts and reinjections reach the model with `suppressOutput`, so nothing lands in your transcript. Asserted in `test/hooks.test.mjs`. |

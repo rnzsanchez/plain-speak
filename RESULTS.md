@@ -2,13 +2,16 @@
 
 ## v2 — nine models, three modes
 
-`node bench/run.mjs --turns 3`, 2026-07-25. Each cell is one real multi-turn session of
+`node bench/run.mjs --turns 3`, 2026-07-25. Each cell is a real multi-turn session of
 3 prompts from `bench/prompts.txt`. Output tokens per turn, and the cut against the same
 model with rules off. Negative means the replies got **longer** with the rules on.
 
+**Opus 5 is the median of 5 runs** (`--repeat 5`, 2026-07-26). Every other row is still a
+single run, so treat those as indicative only — the Opus re-run moved `cte` by 23 points.
+
 | Model | off | `normal` | cut | `cte` | cut |
 |---|---:|---:|---:|---:|---:|
-| claude-opus-5 | 673 | 373 | **45%** | 321 | **52%** |
+| claude-opus-5 · 5 runs | 618 | 322 | **48%** | 437 | 29% |
 | claude-sonnet-5 | 237 | 152 | **36%** | 97 | **59%** |
 | claude-haiku-4-5 | 535 | 483 | 10% | 507 | 5% |
 | gpt-5.6-sol | 340 | 393 | **−16%** | 306 | 10% |
@@ -21,7 +24,13 @@ model with rules off. Negative means the replies got **longer** with the rules o
 ## What this shows
 
 **It works on the large Claude models, and only there.** Opus 5 and Sonnet 5 both cut
-output substantially in both modes. Nothing else came close.
+output substantially. Nothing else came close.
+
+**On Opus, `normal` beats `cte`.** The first pass had `cte` ahead at 52% against 45%.
+Repeated five times, `normal` holds 48% while `cte` falls to 29% — the single run was
+noise. `cte` writes shorter sentences but adds structure, headings and lists, and on this
+model that costs more than the terse phrasing saves. Every single-run row in this table
+is subject to the same doubt.
 
 **On the Claude small model it barely registers.** Haiku 4.5 landed at 10% and 5% —
 inside the noise of a 3-prompt sample.

@@ -114,9 +114,11 @@ The line says "roughly" and names where the percentage came from, because the sp
 apportioned by character size (usage is per message, not per block) and the benchmark
 measured a different kind of turn.
 
-The results are strongly model-dependent and the docs must keep saying so: 45–59% on
-Opus 5 and Sonnet 5, ~10% or less on Haiku 4.5, and nothing reliable on GPT — `normal`
-made five of six GPT models longer. Do not reintroduce a single headline number.
+The results are strongly model-dependent and the docs must keep saying so: on Opus 5
+`normal` cuts 48% and `cte` 29% (median of 5 runs), Sonnet 5 cut 36%/59% on one run,
+~10% or less on Haiku 4.5, and nothing reliable on GPT — `normal` made five of six GPT
+models longer. Do not reintroduce a single headline number. One run is not a result:
+Opus `cte` read 52% on a single run and 29% over five.
 
 ## Memory
 

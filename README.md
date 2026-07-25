@@ -180,7 +180,7 @@ An example report — the shape of the output, with made-up counters:
 plain-speak — cte
 
   Saved roughly 11,300 tokens. Cost 1,400 to do it.
-  Rough: 45% comes from a benchmark on claude-opus-5, not from this session.
+  Rough: 48% comes from a benchmark on claude-opus-5, not from this session.
 
 This session
   stayed short   █████████░  9 of 11 replies
@@ -204,14 +204,15 @@ eightfold. No benchmark for your model, no figure at all.
 
 ## Does it actually save tokens?
 
-Sometimes. Measured cut in output tokens against `off`, one 3-turn session per cell, run
-25 July 2026 with `node bench/run.mjs` — Claude models through `claude -p`, GPT models
-through `codex exec`. Raw per-run JSON is in [`bench/results/`](./bench/results):
+Sometimes. Measured cut in output tokens against `off`, 3-turn sessions, `node
+bench/run.mjs` — Claude models through `claude -p`, GPT models through `codex exec`. Opus
+is the median of 5 runs; every other row is a single run and moves under repetition. Raw
+per-run JSON is in [`bench/results/`](./bench/results):
 
 ```
                     normal                      cte
               longer ← 0 → shorter      longer ← 0 → shorter
-claude-opus-5          │█████████     45%        │██████████    52%
+claude-opus-5          │██████████    48%        │██████        29%
 claude-sonnet-5        │███████       36%        │████████████  59%
 claude-haiku-4-5       │██            10%        │█              5%
 gpt-5.6-sol         ░░░│             −16%        │██            10%
@@ -223,8 +224,11 @@ gpt-5.4-mini           │█              7%    ░░░░│             −
 ```
 
 It works on the large Claude models, and only there. On Haiku it barely registers. On GPT
-models `normal` made five of six *longer*. Nine models, one run each, general questions —
-read the caveats before quoting any of it.
+models `normal` made five of six *longer*.
+
+Repetition matters: Opus `cte` first measured 52% on one run and 29% on the median of
+five. Assume every single-run row carries that much doubt, and re-run your own model
+before believing any of it.
 
 → **[Method and caveats](./docs/benchmark.md)** · **[Full numbers](./RESULTS.md)**
 
