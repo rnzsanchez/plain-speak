@@ -1,0 +1,47 @@
+{
+  "model": "claude-opus-5",
+  "mode": "off",
+  "turns": 3,
+  "outputTokens": 1853,
+  "outputPerTurn": 618,
+  "visibleOutputTokens": null,
+  "reasoningTokens": null,
+  "inputTokens": 6,
+  "cacheRead": 61398,
+  "cacheCreate": 33664,
+  "costUsd": 0.42496900000000004,
+  "turnResults": [
+    {
+      "prompt": "What is the difference between a git merge and a git rebase?",
+      "outputTokens": 660,
+      "inputTokens": 2,
+      "cacheRead": 15268,
+      "cacheCreate": 15594,
+      "costUsd": 0.180084
+    },
+    {
+      "prompt": "Should I use a UUID or an auto-increment integer for a primary key?",
+      "outputTokens": 748,
+      "inputTokens": 2,
+      "cacheRead": 30862,
+      "cacheCreate": 685,
+      "costUsd": 0.040991
+    },
+    {
+      "prompt": "Explain what a database index does.",
+      "outputTokens": 896,
+      "inputTokens": 2,
+      "cacheRead": 15268,
+      "cacheCreate": 17385,
+      "costUsd": 0.20389400000000002
+    }
+  ],
+  "runs": 5,
+  "outputPerTurnRuns": [
+    768,
+    641,
+    618,
+    519,
+    560
+  ]
+}
