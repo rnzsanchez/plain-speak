@@ -65,8 +65,33 @@ function readSafe(file) {
   }
 }
 
-function readMode() {
-  return normalizeMode(readSafe(modePath())) || 'normal';
+const PROJECT_FILE = '.plain-speak-mode';
+
+// Precedence: an env var beats a project pin, which beats the global setting. So one
+// repo can sit in cte while everything else stays on normal, and a single shell can
+// override both without touching either file.
+function readMode(cwd = process.cwd()) {
+  return (
+    normalizeMode(process.env.PLAIN_SPEAK_MODE) ||
+    (cwd ? normalizeMode(readSafe(path.join(cwd, PROJECT_FILE))) : null) ||
+    normalizeMode(readSafe(modePath())) ||
+    'normal'
+  );
+}
+
+// Which of those three is actually in force — `status` reports it so a project pin is
+// never a mystery.
+function modeSource(cwd = process.cwd()) {
+  if (normalizeMode(process.env.PLAIN_SPEAK_MODE)) return 'PLAIN_SPEAK_MODE';
+  if (cwd && normalizeMode(readSafe(path.join(cwd, PROJECT_FILE)))) return `${PROJECT_FILE} in this project`;
+  return 'global';
+}
+
+function writeProjectMode(raw, cwd = process.cwd()) {
+  const mode = normalizeMode(raw);
+  if (!mode) throw new Error(`unknown mode "${raw}" — use ${MODES.join(', ')}`);
+  writeSafe(path.join(cwd, PROJECT_FILE), mode);
+  return mode;
 }
 
 function writeMode(raw) {
@@ -190,6 +215,9 @@ module.exports = {
   normalizeMode,
   readMode,
   writeMode,
+  modeSource,
+  writeProjectMode,
+  PROJECT_FILE,
   readStore,
   writeStore,
   readSession,

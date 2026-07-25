@@ -6,16 +6,22 @@
 #   "statusLine": { "type": "command",
 #     "command": "bash ~/.claude/plain-speak/statusline.sh; bash ~/my-statusline.sh" }
 
-FLAG="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/plain-speak/mode"
+# A project can pin its own mode; otherwise the global one applies.
+FLAG="./.plain-speak-mode"
+[ -f "$FLAG" ] || FLAG="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/plain-speak/mode"
 
 # Refuse symlinks: a local attacker could point the flag at another file and have
 # the statusline render its bytes — including terminal escapes — on every keystroke.
 [ -L "$FLAG" ] && exit 0
 [ ! -f "$FLAG" ] && exit 0
 
-# Cap the read and strip anything outside [a-z-] to block escape-sequence injection.
-MODE=$(head -c 32 "$FLAG" 2>/dev/null | tr -d '\n\r' | tr '[:upper:]' '[:lower:]')
-MODE=$(printf '%s' "$MODE" | tr -cd 'a-z-')
+# Builtins only, no subprocesses. This runs on every keystroke, and four forks for
+# head/tr cost more than everything else here put together.
+MODE=""
+IFS= read -r MODE < "$FLAG" || true
+MODE="${MODE:0:32}"
+MODE="${MODE//[!A-Za-z-]/}"   # strip anything that could carry a terminal escape
+shopt -s nocasematch
 
 case "$MODE" in
   normal) printf '\033[38;5;79m[PLAIN-SPEAK]\033[0m' ;;

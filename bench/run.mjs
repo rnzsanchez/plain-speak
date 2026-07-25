@@ -53,7 +53,9 @@ function runClaude(prompt, model, sessionId) {
     encoding: 'utf8',
     maxBuffer: 64 * 1024 * 1024,
     env: BENCH_ENV,
+    stdio: ['ignore', 'pipe', 'pipe'],
   });
+  if (!r.stdout) throw new Error(`claude produced no output: ${(r.stderr || '').trim().slice(0, 300)}`);
   const json = JSON.parse(r.stdout);
   const u = json.usage || {};
   return {
@@ -66,29 +68,51 @@ function runClaude(prompt, model, sessionId) {
   };
 }
 
-function runCodex(prompt, model, started) {
-  const args = started
-    ? ['exec', 'resume', '--last', '--json', '-m', model, prompt]
-    : ['exec', '--json', '-m', model, prompt];
+function runCodex(prompt, model, threadId) {
+  // --skip-git-repo-check: benchmark prompts are generic questions, so the run may
+  // sit anywhere. Without it Codex refuses outright ("not inside a trusted directory").
+  const args = threadId
+    ? ['exec', 'resume', threadId, '--json', '--skip-git-repo-check', '-m', model, prompt]
+    : ['exec', '--json', '--skip-git-repo-check', '-m', model, prompt];
+
+  // stdio stdin MUST be 'ignore'. With a pipe, `codex exec` treats stdin as extra
+  // prompt input and blocks waiting for EOF — it prints "Reading additional input
+  // from stdin..." and never returns. That silently produced whole runs of zeros.
   const r = spawnSync('codex', args, {
     encoding: 'utf8',
     maxBuffer: 64 * 1024 * 1024,
     env: BENCH_ENV,
+    stdio: ['ignore', 'pipe', 'pipe'],
   });
-  // Last token_count event of the turn carries that turn's usage.
-  let last = null;
+
+  // The --json stream is not the session-file format: usage arrives on a
+  // `turn.completed` event, and the thread id on `thread.started`.
+  let usage = null;
+  let thread = threadId || null;
   for (const line of (r.stdout || '').split('\n')) {
-    if (!line.includes('token_count')) continue;
+    if (!line) continue;
+    let event;
     try {
-      const info = JSON.parse(line)?.payload?.info?.last_token_usage;
-      if (info) last = info;
-    } catch {}
+      event = JSON.parse(line);
+    } catch {
+      continue;
+    }
+    if (event.type === 'thread.started' && event.thread_id) thread = event.thread_id;
+    if (event.type === 'turn.completed' && event.usage) usage = event.usage;
   }
+
+  if (!usage) {
+    throw new Error(
+      `codex reported no usage (exit ${r.status}): ${(r.stderr || r.stdout || '').trim().slice(0, 300)}`
+    );
+  }
+
   return {
-    sessionId: 'last',
-    outputTokens: (last?.output_tokens || 0) + (last?.reasoning_output_tokens || 0),
-    inputTokens: last?.input_tokens || 0,
-    cacheRead: last?.cached_input_tokens || 0,
+    sessionId: thread,
+    // Reasoning tokens are billed as output, so they belong in the output figure.
+    outputTokens: (usage.output_tokens || 0) + (usage.reasoning_output_tokens || 0),
+    inputTokens: usage.input_tokens || 0,
+    cacheRead: usage.cached_input_tokens || 0,
     cacheCreate: 0,
     costUsd: null, // Codex does not report a price; compare tokens, not dollars.
   };
@@ -100,7 +124,7 @@ function session(model, mode) {
   let sessionId = null;
   for (const prompt of prompts) {
     const t = isCodex(model)
-      ? runCodex(prompt, model, Boolean(sessionId))
+      ? runCodex(prompt, model, sessionId)
       : runClaude(prompt, model, sessionId);
     sessionId = t.sessionId;
     turnResults.push({ prompt, ...t });
@@ -148,6 +172,7 @@ for (const { model, mode } of plan) {
   console.log(`\n${model} · ${mode}`);
   try {
     const result = session(model, mode);
+    if (!result.outputTokens) throw new Error('zero output tokens — refusing to save a bogus result');
     const file = path.join(outDir, `${stamp}-${model}-${mode}.json`);
     fs.writeFileSync(file, `${JSON.stringify(result, null, 2)}\n`);
     console.log(`  → ${result.outputTokens} output tokens total, saved ${path.basename(file)}`);

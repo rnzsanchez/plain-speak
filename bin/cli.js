@@ -14,7 +14,8 @@ const USAGE = `plain-speak — terse-response modes with an active hygiene check
   plain-speak install [--claude] [--codex]   wire up hooks and slash commands
   plain-speak install --statusline           also chain the badge onto your statusline
   plain-speak uninstall [--claude|--codex]   remove what it added
-  plain-speak status [mode]                  show status, or switch mode
+  plain-speak uninstall --purge              …and delete the mode and stats too
+  plain-speak status [mode] [--project]      show status, or switch mode (--project pins this repo)
   plain-speak mode [off|normal|cte]          show or set the mode ("max" = cte)
   plain-speak badge                          print the statusline badge
   plain-speak stats [--session-file <path>]  token and drift report
@@ -47,26 +48,37 @@ function main() {
       const both = !has('--claude') && !has('--codex');
       if (both || has('--claude')) claude.uninstall({ keepRuntime: has('--claude') });
       if (both || has('--codex')) codex.uninstall();
+      if (has('--purge')) {
+        fs.rmSync(state.homeDir(), { recursive: true, force: true });
+        console.log('Purged ~/.claude/plain-speak — mode and stats are gone');
+      }
       return;
     }
 
     // What /plain-speak runs. No argument: turn it on if it was off, then show
     // where things stand. With an argument: switch mode.
     case 'status': {
-      const wanted = process.argv[3];
+      const wanted = process.argv[3] && !process.argv[3].startsWith('--') ? process.argv[3] : null;
       let mode = state.readMode();
-      if (wanted) mode = state.writeMode(wanted);
-      else if (mode === 'off') mode = state.writeMode('normal');
+      if (wanted) {
+        mode = has('--project') ? state.writeProjectMode(wanted) : state.writeMode(wanted);
+      } else if (mode === 'off') {
+        mode = state.writeMode('normal');
+      }
+      const source = state.modeSource();
       // Plugin installs namespace the commands; standalone ones do not.
       const plugin = Boolean(process.env.CLAUDE_PLUGIN_ROOT);
       const cmd = plugin ? '/plain-speak:mode' : '/plain-speak';
       const statsCmd = plugin ? '/plain-speak:stats' : '/plain-speak-stats';
-      console.log(`plain-speak — ${mode}${mode === 'cte' ? ' 🧠' : ''}\n`);
-      const row = (left, right) => console.log(`  ${left.padEnd(26)}${right}`);
+      console.log(
+        `plain-speak — ${mode}${mode === 'cte' ? ' 🧠' : ''}${source === 'global' ? '' : ` (from ${source})`}\n`
+      );
+      const row = (left, right) => console.log(`  ${left.padEnd(28)}${right}`);
       row(`${cmd} off`, 'nothing injected, nothing checked');
       row(`${cmd} normal`, 'plain voice, answer first, no fuss');
       row(`${cmd} cte`, 'same voice at twelve — short, blunt');
       row(statsCmd, 'token and drift report');
+      if (source === 'global') row(`${cmd} cte --project`, 'pin this project only');
       return;
     }
 

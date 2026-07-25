@@ -12,7 +12,7 @@ const { LENGTH_REQUESTED } = require('../drift');
 // does plain-speak off do?" would silently switch the mode mid-conversation.
 const SWITCH = /^\s*\/?plain[-\s]?speak\s+(off|on|normal|cte|max|default)\s*[.!]?\s*$/i;
 
-run(({ sessionId, prompt }) => {
+run(({ sessionId, prompt, cwd }) => {
   const store = state.readStore();
   const session = state.readSession(sessionId, store);
 
@@ -28,7 +28,7 @@ run(({ sessionId, prompt }) => {
     );
   }
 
-  const mode = state.readMode();
+  const mode = state.readMode(cwd);
   if (mode === 'off') return;
 
   // Remembered for the Stop hook, which never sees the prompt. Only the boolean

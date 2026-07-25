@@ -28,6 +28,7 @@ function normalize(data) {
     prompt: data.user_prompt || data.prompt || '',
     reply: data.last_assistant_message || '',
     permissionMode: data.permission_mode || '',
+    cwd: data.cwd || process.cwd(),
     transcriptPath: data.transcript_path || '',
     source: data.source || '',
   };

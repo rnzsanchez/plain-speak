@@ -8,8 +8,8 @@ const { run } = require('./lib');
 const state = require('../state');
 const drift = require('../drift');
 
-run(({ sessionId, reply, permissionMode }) => {
-  const mode = state.readMode();
+run(({ sessionId, reply, permissionMode, cwd }) => {
+  const mode = state.readMode(cwd);
   if (mode === 'off') return;
 
   const store = state.readStore();

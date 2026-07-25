@@ -6,8 +6,8 @@
 const { run, rulesFor, inject } = require('./lib');
 const state = require('../state');
 
-run(({ sessionId }) => {
-  const mode = state.readMode();
+run(({ sessionId, cwd }) => {
+  const mode = state.readMode(cwd);
   if (mode === 'off') return;
 
   const store = state.readStore();
