@@ -10,14 +10,15 @@
 //   node bench/run.mjs --models claude-haiku-4-5,gpt-5.4-mini --turns 3
 //   node bench/run.mjs --modes normal,cte --prompts bench/prompts.txt
 //   node bench/run.mjs --models claude-opus-5 --repeat 5   (median of 5, less noise)
+//
+// Runs in a clean room: its own Claude and Codex homes under ~/.plain-speak-bench,
+// holding nothing but plain-speak, and an empty working directory. Each home needs one
+// interactive login before the first run — the harness prints the command and stops.
 
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
-import { createRequire } from 'node:module';
-
-const require = createRequire(import.meta.url);
-const state = require('../src/state.js');
+import os from 'node:os';
 
 const CLAUDE_MODELS = ['claude-opus-5', 'claude-sonnet-5', 'claude-haiku-4-5'];
 // Every chat model Codex offers locally, from ~/.codex/models_cache.json.
@@ -55,17 +56,57 @@ const prompts = fs
   .filter(Boolean)
   .slice(0, turns);
 
+// A clean room, because the operator's own config is a confound. Run under the machine's
+// real home and every `off` baseline inherits whatever the user already told the model —
+// a global CLAUDE.md that says "be terse", plugins that inject at session start — which
+// makes the measured cut a floor rather than the effect of these rules. So each child
+// gets its own CLAUDE_CONFIG_DIR and CODEX_HOME holding nothing but plain-speak, and runs
+// from an empty directory so no project CLAUDE.md or AGENTS.md is discovered.
+//
+// The homes persist between runs because each needs an interactive login once:
+//   CLAUDE_CONFIG_DIR=<home>/claude claude    → /login
+//   CODEX_HOME=<home>/codex codex login
+// --isolated is the strict form and needs one interactive login per home. The default
+// uses the machine's own homes, because that is where the credentials are: it keeps the
+// operator's global rules in the baseline, which understates the cut. Either way the
+// children run from an empty directory, so no project CLAUDE.md or AGENTS.md is read,
+// and every cell and repeat starts a brand-new session.
+const isolated = has('isolated');
+const benchHome = flag('home', path.join(os.homedir(), '.plain-speak-bench'));
+const SCRATCH = path.join(benchHome, 'scratch');
+const CLAUDE_HOME = isolated
+  ? path.join(benchHome, 'claude')
+  : process.env.CLAUDE_CONFIG_DIR || path.join(os.homedir(), '.claude');
+const CODEX_HOME = isolated
+  ? path.join(benchHome, 'codex')
+  : process.env.CODEX_HOME || path.join(os.homedir(), '.codex');
+
 // Hooks stay live in the child — they are the thing under test — but this flag keeps
 // the throwaway sessions out of the user's lifetime stats.
-const BENCH_ENV = { ...process.env, PLAIN_SPEAK_BENCH: '1' };
+// Setting CLAUDE_CONFIG_DIR at all — even to its own default path — stops Claude Code
+// reading credentials from the OS keychain, and every call comes back "Not logged in"
+// with zero tokens. So the child only gets these when --isolated asked for a separate
+// home that was logged into on purpose.
+const BENCH_ENV = {
+  ...process.env,
+  PLAIN_SPEAK_BENCH: '1',
+  ...(isolated ? { CLAUDE_CONFIG_DIR: CLAUDE_HOME, CODEX_HOME } : {}),
+};
 
-function runClaude(prompt, model, sessionId) {
+// The mode goes to the child as an environment variable, which outranks both the global
+// flag and a project pin (src/state.js). Earlier versions wrote the global flag and put
+// it back on exit; a run killed halfway then left the operator in whatever mode it had
+// reached. Nothing is written now, so there is nothing to restore.
+const envFor = (mode) => ({ ...BENCH_ENV, PLAIN_SPEAK_MODE: mode });
+
+function runClaude(prompt, model, sessionId, env) {
   const args = ['-p', prompt, '--model', model, '--output-format', 'json'];
   if (sessionId) args.push('--resume', sessionId);
   const r = spawnSync('claude', args, {
     encoding: 'utf8',
     maxBuffer: 64 * 1024 * 1024,
-    env: BENCH_ENV,
+    env,
+    cwd: SCRATCH,
     stdio: ['ignore', 'pipe', 'pipe'],
   });
   if (!r.stdout) throw new Error(`claude produced no output: ${(r.stderr || '').trim().slice(0, 300)}`);
@@ -81,12 +122,13 @@ function runClaude(prompt, model, sessionId) {
   };
 }
 
-function runCodex(prompt, model, threadId) {
+function runCodex(prompt, model, threadId, env) {
   // --skip-git-repo-check: benchmark prompts are generic questions, so the run may
   // sit anywhere. Without it Codex refuses outright ("not inside a trusted directory").
+  const sandbox = ['-s', 'workspace-write'];
   const args = threadId
-    ? ['exec', 'resume', threadId, '--json', '--skip-git-repo-check', '-m', model, prompt]
-    : ['exec', '--json', '--skip-git-repo-check', '-m', model, prompt];
+    ? ['exec', 'resume', threadId, '--json', '--skip-git-repo-check', ...sandbox, '-m', model, prompt]
+    : ['exec', '--json', '--skip-git-repo-check', ...sandbox, '-m', model, prompt];
 
   // stdio stdin MUST be 'ignore'. With a pipe, `codex exec` treats stdin as extra
   // prompt input and blocks waiting for EOF — it prints "Reading additional input
@@ -94,7 +136,8 @@ function runCodex(prompt, model, threadId) {
   const r = spawnSync('codex', args, {
     encoding: 'utf8',
     maxBuffer: 64 * 1024 * 1024,
-    env: BENCH_ENV,
+    env,
+    cwd: SCRATCH,
     stdio: ['ignore', 'pipe', 'pipe'],
   });
 
@@ -137,13 +180,13 @@ function runCodex(prompt, model, threadId) {
 }
 
 function session(model, mode) {
-  state.writeMode(mode);
+  const env = envFor(mode);
   const turnResults = [];
   let sessionId = null;
   for (const prompt of prompts) {
     const t = isCodex(model)
-      ? runCodex(prompt, model, sessionId)
-      : runClaude(prompt, model, sessionId);
+      ? runCodex(prompt, model, sessionId, env)
+      : runClaude(prompt, model, sessionId, env);
     sessionId = t.sessionId;
     // The id is needed to resume the next turn, not to keep. Saved results go in a
     // public repo, and a real session id is not something the numbers need.
@@ -168,6 +211,51 @@ function session(model, mode) {
   };
 }
 
+// Set the clean homes up, and refuse to run half-configured. A missing login shows up
+// as a cell of zeros an hour later, which reads as a measurement forever after.
+function preflight() {
+  fs.mkdirSync(SCRATCH, { recursive: true });
+  if (!isolated) {
+    console.log('Running under your own Claude and Codex config: global rules and plugins');
+    console.log('are in the baseline too. `--isolated` measures plain-speak alone.\n');
+    return;
+  }
+  const needClaude = models.some((m) => !isCodex(m));
+  const needCodex = models.some(isCodex);
+
+  const cli = path.join(import.meta.dirname, '..', 'bin', 'cli.js');
+  const install = (args) =>
+    spawnSync('node', [cli, 'install', ...args], { env: BENCH_ENV, stdio: 'ignore' });
+
+  if (needClaude) {
+    if (!fs.existsSync(path.join(CLAUDE_HOME, '.credentials.json')) && !loggedIn(CLAUDE_HOME)) {
+      fail(`the benchmark's Claude home is not logged in.\n\n  CLAUDE_CONFIG_DIR=${CLAUDE_HOME} claude\n\nthen /login, then quit. It is a separate login on purpose: your own config carries\nglobal rules and plugins that would shape the "off" baseline.`);
+    }
+    install(['--claude']);
+  }
+  if (needCodex) {
+    if (!fs.existsSync(path.join(CODEX_HOME, 'auth.json'))) {
+      fail(`the benchmark's Codex home is not logged in.\n\n  CODEX_HOME=${CODEX_HOME} codex login`);
+    }
+    install(['--codex']);
+  }
+}
+
+// The account record, not the secret: Claude Code keeps credentials in the OS keychain
+// and only the account marker in the config dir.
+function loggedIn(home) {
+  try {
+    return Boolean(JSON.parse(fs.readFileSync(path.join(home, '.claude.json'), 'utf8')).oauthAccount);
+  } catch {
+    return false;
+  }
+}
+
+function fail(message) {
+  console.error(`\nbench: ${message}\n`);
+  process.exit(1);
+}
+
 const plan = models.flatMap((m) => modes.map((mode) => ({ model: m, mode })));
 
 if (has('dry-run')) {
@@ -183,12 +271,7 @@ if (has('dry-run')) {
   process.exit(0);
 }
 
-// The mode flag is global, so the run temporarily changes the live setting.
-// Put it back no matter how we exit.
-const previousMode = state.readMode();
-const restore = () => state.writeMode(previousMode);
-process.on('exit', restore);
-process.on('SIGINT', () => process.exit(130));
+preflight();
 
 fs.mkdirSync(outDir, { recursive: true });
 const stamp = new Date().toISOString().replace(/[:.]/g, '-');
