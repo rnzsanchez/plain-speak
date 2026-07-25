@@ -141,8 +141,8 @@ Everything runs inside a session. Installing is the only thing you do in a shell
 
 | Command | What it does |
 |---|---|
-| `/plain-speak:mode` | Re-arm the rules for this session, and show where it stands |
-| `/plain-speak:mode cte` | Switch mode — `off`, `normal`, `cte`; it answers in the new voice |
+| `/plain-speak:mode` | Say which mode is active. Runs nothing — the answer is already in context |
+| `/plain-speak:mode cte` | Switch mode — `off`, `normal`, `cte`. Re-arms the rules, answers in the new voice |
 | `/plain-speak:stats` | Token and drift report: this session, and lifetime |
 
 Plugin commands carry the plugin's namespace, hence the `:`. The npx route has no
