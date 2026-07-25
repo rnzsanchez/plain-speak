@@ -96,6 +96,45 @@ test('e2e: install wires both tools and leaves everything else alone', () => {
   assert.match(run(env, 'doctor'), /ok {3}SessionStart/);
 });
 
+test('e2e: with the plugin enabled, the installer leaves the commands to it', () => {
+  const { env, claudeDir } = sandbox({
+    settings: { enabledPlugins: { 'plain-speak@plain-speak': true } },
+  });
+  // An older npx install left these behind. Upgrading has to clear them, or the user
+  // sees both /plain-speak and /plain-speak:mode in the picker.
+  const stale = path.join(claudeDir, 'skills', 'plain-speak');
+  fs.mkdirSync(stale, { recursive: true });
+  fs.writeFileSync(path.join(stale, 'SKILL.md'), 'stale\n');
+
+  const out = run(env, 'install', '--claude');
+
+  assert.match(out, /from the plugin/);
+  assert.ok(!fs.existsSync(stale), 'the stale user-level copy must be removed');
+  // Hooks still get wired — only the commands are the plugin's job.
+  assert.ok(readJson(path.join(claudeDir, 'settings.json')).hooks.Stop.length > 0);
+  assert.match(run(env, 'status'), /switch: \/plain-speak:mode/);
+  assert.match(run(env, 'doctor'), /ok {3}\/plain-speak:mode/);
+});
+
+test('e2e: a disabled plugin provides nothing, so the commands are installed', () => {
+  const { env, claudeDir } = sandbox({
+    settings: { enabledPlugins: { 'plain-speak@plain-speak': false } },
+  });
+  run(env, 'install', '--claude');
+  assert.ok(fs.existsSync(path.join(claudeDir, 'skills', 'plain-speak', 'SKILL.md')));
+});
+
+test('e2e: status re-arms the rules, and says nothing when the mode is off', () => {
+  const { env } = sandbox();
+  const armed = run(env, 'status', 'cte');
+  assert.match(armed, /RULES/);
+  assert.match(armed, /PLAIN-SPEAK MODE: cte/);
+  assert.match(armed, /Head took hits/, "the mode's own rule text has to be in there");
+
+  const off = run(env, 'status', 'off');
+  assert.doesNotMatch(off, /RULES/, 'off means nothing to re-arm');
+});
+
 test('e2e: --statusline chains, and a second install does not duplicate', () => {
   const { env, claudeDir } = sandbox({
     settings: { statusLine: { type: 'command', command: 'bash ~/mine.sh' } },
