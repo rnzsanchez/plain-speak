@@ -57,11 +57,23 @@ function install({ chainStatusline = false } = {}) {
   }
 
   writeJson(settingsPath(), settings);
-  fs.mkdirSync(skillsDir(), { recursive: true });
-  const skills = copySkills(skillsDir());
+
+  // The plugin already carries the commands as /plain-speak:mode and /plain-speak:stats.
+  // Copying user-level ones on top shows every command twice in the picker, so don't.
+  let commands = '/plain-speak:mode /plain-speak:stats (from the plugin)';
+  if (pluginInstalled(settings)) {
+    // An earlier npx install may have left user-level copies behind. Leaving them is
+    // what puts every command in the picker twice, so clear them on the way past.
+    removeSkills(skillsDir());
+  } else {
+    fs.mkdirSync(skillsDir(), { recursive: true });
+    commands = copySkills(skillsDir())
+      .map((s) => `/${s}`)
+      .join(' ');
+  }
 
   console.log(`Claude Code: hooks + badge wired, runtime at ${dir}`);
-  console.log(`  commands: ${skills.map((s) => `/${s}`).join(' ')}`);
+  console.log(`  commands: ${commands}`);
   console.log(`  ${badgeNote}`);
   console.log(`  settings backed up to ${settingsPath()}.plain-speak-backup`);
   console.log('  nothing else in your settings was changed');
@@ -101,32 +113,36 @@ function uninstall({ keepRuntime = false } = {}) {
 function doctor() {
   const settings = readJson(settingsPath(), {});
   const hooks = settings.hooks || {};
+  // A plugin install wires its hooks from the plugin's own manifest, so settings.json
+  // is empty by design. Reporting MISS there makes a healthy install look broken.
+  const plugin = pluginInstalled(settings);
   console.log('Claude Code');
   for (const event of Object.keys(HOOK_EVENTS)) {
     const wired = (hooks[event] || []).some((g) => (g.hooks || []).some((h) => isOurs(h.command)));
-    console.log(`  ${wired ? 'ok  ' : 'MISS'} ${event}`);
+    if (wired) console.log(`  ok   ${event}`);
+    else console.log(`  ${plugin ? 'ok  ' : 'MISS'} ${event}${plugin ? ' (from the plugin)' : ''}`);
   }
   const cmd = (settings.statusLine && settings.statusLine.command) || '';
-  console.log(`  ${cmd.includes('plain-speak') ? 'ok  ' : 'none'} statusline badge`);
-  for (const name of ['plain-speak', 'plain-speak-stats']) {
-    const there = fs.existsSync(path.join(skillsDir(), name, 'SKILL.md'));
-    console.log(`  ${there ? 'ok  ' : 'none'} /${name}`);
-  }
-  if (!hasBareCommands()) {
-    console.log('  commands come from the plugin as /plain-speak:mode and /plain-speak:stats');
-    console.log('  run `plain-speak commands` if you want the bare /plain-speak form');
+  if (cmd.includes('plain-speak')) console.log('  ok   statusline badge');
+  else if (plugin) console.log('  ok   statusline badge (from the plugin, if yours renders them)');
+  else console.log('  none statusline badge');
+  if (plugin) {
+    console.log('  ok   /plain-speak:mode /plain-speak:stats (from the plugin)');
+  } else {
+    for (const name of ['plain-speak', 'plain-speak-stats']) {
+      const there = fs.existsSync(path.join(skillsDir(), name, 'SKILL.md'));
+      console.log(`  ${there ? 'ok  ' : 'none'} /${name}`);
+    }
   }
   console.log(`  mode: ${state.readMode()}`);
 }
 
-// Bare-named commands, installed on their own. A plugin cannot provide these: plugin
-// skills always carry the plugin's namespace, so /plain-speak <mode> has to come from a
-// user-level skill.
-function installCommands() {
-  fs.mkdirSync(skillsDir(), { recursive: true });
-  return copySkills(skillsDir());
-}
-
 const hasBareCommands = () => fs.existsSync(path.join(skillsDir(), 'plain-speak', 'SKILL.md'));
 
-module.exports = { install, uninstall, doctor, installCommands, hasBareCommands };
+// `plain-speak@plain-speak` is the marketplace form; match any owner. The value matters:
+// disabling a plugin leaves the key behind set to false, and a disabled plugin provides
+// no commands, so treating it as installed would leave the user with none at all.
+const pluginInstalled = (settings) =>
+  Object.entries(settings.enabledPlugins || {}).some(([k, on]) => on && k.startsWith('plain-speak@'));
+
+module.exports = { install, uninstall, doctor, hasBareCommands, pluginInstalled };

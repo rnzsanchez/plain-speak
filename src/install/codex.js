@@ -107,4 +107,8 @@ function doctor() {
   console.log(`  ${featureEnabled(toml) ? 'ok  ' : 'MISS'} [features] hooks`);
 }
 
-module.exports = { install, uninstall, doctor };
+// Codex has no plugin namespace, so its commands are always the bare form.
+const hasBareCommands = () =>
+  fs.existsSync(path.join(codexHome(), 'skills', 'plain-speak', 'SKILL.md'));
+
+module.exports = { hasBareCommands, install, uninstall, doctor };
