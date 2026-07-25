@@ -1,0 +1,90 @@
+'use strict';
+// Codex CLI wiring. Same three events, same payload shape, so the same hook
+// scripts run unchanged — only the config format differs.
+
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
+const { copyRuntime, HOOK_EVENTS, isOurs, readJson, writeJson } = require('./shared');
+
+const codexHome = () => process.env.CODEX_HOME || path.join(os.homedir(), '.codex');
+const hooksPath = () => path.join(codexHome(), 'hooks.json');
+const configPath = () => path.join(codexHome(), 'config.toml');
+
+function enableHooksFeature() {
+  const file = configPath();
+  let toml = '';
+  try {
+    toml = fs.readFileSync(file, 'utf8');
+  } catch {}
+  if (/^\s*hooks\s*=\s*true/m.test(toml)) return false;
+
+  if (/^\[features\]/m.test(toml)) {
+    toml = toml.replace(/^\[features\]/m, '[features]\nhooks = true');
+  } else {
+    toml += `${toml.endsWith('\n') || !toml ? '' : '\n'}\n[features]\nhooks = true\n`;
+  }
+  fs.mkdirSync(codexHome(), { recursive: true });
+  const backup = `${file}.plain-speak-backup`;
+  if (fs.existsSync(file) && !fs.existsSync(backup)) fs.copyFileSync(file, backup);
+  fs.writeFileSync(file, toml);
+  return true;
+}
+
+function install() {
+  if (!fs.existsSync(codexHome())) {
+    console.log('Codex: not installed (no ~/.codex) — skipped');
+    return;
+  }
+  const dir = copyRuntime();
+  const config = readJson(hooksPath(), {});
+  config.hooks = config.hooks || {};
+
+  for (const [event, script] of Object.entries(HOOK_EVENTS)) {
+    const command = `node "${path.join(dir, 'src', 'hooks', script)}"`;
+    const kept = (config.hooks[event] || [])
+      .map((g) => ({ ...g, hooks: (g.hooks || []).filter((h) => !isOurs(h.command)) }))
+      .filter((g) => g.hooks.length > 0);
+    config.hooks[event] = [...kept, { hooks: [{ type: 'command', command }] }];
+  }
+
+  writeJson(hooksPath(), config);
+  const flipped = enableHooksFeature();
+
+  console.log(`Codex: hooks wired at ${hooksPath()}`);
+  if (flipped) console.log('  enabled [features] hooks = true in config.toml');
+  // Codex asks the user to trust hook sources on first run. Prompting is the
+  // point of that check, so the installer tells you rather than bypassing it.
+  console.log('  first Codex run will ask you to trust these hooks — accept once');
+}
+
+function uninstall() {
+  const config = readJson(hooksPath(), null);
+  if (!config || !config.hooks) return;
+  for (const event of Object.keys(HOOK_EVENTS)) {
+    config.hooks[event] = (config.hooks[event] || [])
+      .map((g) => ({ ...g, hooks: (g.hooks || []).filter((h) => !isOurs(h.command)) }))
+      .filter((g) => g.hooks.length > 0);
+    if (config.hooks[event].length === 0) delete config.hooks[event];
+  }
+  writeJson(hooksPath(), config);
+  console.log('Codex: hooks removed ([features] hooks left enabled)');
+}
+
+function doctor() {
+  if (!fs.existsSync(codexHome())) return console.log('Codex\n  not installed');
+  const config = readJson(hooksPath(), {});
+  const hooks = config.hooks || {};
+  console.log('Codex');
+  for (const event of Object.keys(HOOK_EVENTS)) {
+    const wired = (hooks[event] || []).some((g) => (g.hooks || []).some((h) => isOurs(h.command)));
+    console.log(`  ${wired ? 'ok  ' : 'MISS'} ${event}`);
+  }
+  let toml = '';
+  try {
+    toml = fs.readFileSync(configPath(), 'utf8');
+  } catch {}
+  console.log(`  ${/^\s*hooks\s*=\s*true/m.test(toml) ? 'ok  ' : 'MISS'} [features] hooks`);
+}
+
+module.exports = { install, uninstall, doctor };
