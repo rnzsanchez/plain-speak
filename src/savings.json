@@ -1,91 +1,91 @@
 {
   "claude-haiku-4-5": {
     "normal": {
-      "outputCutPct": 9.7,
+      "outputCutPct": 7.2,
       "turns": 3
     },
     "cte": {
-      "outputCutPct": 5.2,
+      "outputCutPct": 21.5,
       "turns": 3
     }
   },
   "claude-opus-5": {
     "normal": {
-      "outputCutPct": 47.9,
+      "outputCutPct": 54.6,
       "turns": 3
     },
     "cte": {
-      "outputCutPct": 29.3,
+      "outputCutPct": 47.3,
       "turns": 3
     }
   },
   "claude-sonnet-5": {
     "normal": {
-      "outputCutPct": 35.9,
+      "outputCutPct": 20,
       "turns": 3
     },
     "cte": {
-      "outputCutPct": 59.1,
+      "outputCutPct": 41.5,
       "turns": 3
     }
   },
   "gpt-5.4": {
     "normal": {
-      "outputCutPct": -5.4,
+      "outputCutPct": -6.4,
       "turns": 3
     },
     "cte": {
-      "outputCutPct": -14.6,
+      "outputCutPct": -2,
       "turns": 3
     }
   },
   "gpt-5.4-mini": {
     "normal": {
-      "outputCutPct": 7.4,
+      "outputCutPct": -1.3,
       "turns": 3
     },
     "cte": {
-      "outputCutPct": -21.6,
+      "outputCutPct": -8,
       "turns": 3
     }
   },
   "gpt-5.5": {
     "normal": {
-      "outputCutPct": 0.3,
+      "outputCutPct": -0.9,
       "turns": 3
     },
     "cte": {
-      "outputCutPct": 6.3,
+      "outputCutPct": -6.9,
       "turns": 3
     }
   },
   "gpt-5.6-luna": {
     "normal": {
-      "outputCutPct": -14.7,
+      "outputCutPct": -11,
       "turns": 3
     },
     "cte": {
-      "outputCutPct": 0,
+      "outputCutPct": 1.5,
       "turns": 3
     }
   },
   "gpt-5.6-sol": {
     "normal": {
-      "outputCutPct": -15.6,
+      "outputCutPct": -2.5,
       "turns": 3
     },
     "cte": {
-      "outputCutPct": 10,
+      "outputCutPct": 9,
       "turns": 3
     }
   },
   "gpt-5.6-terra": {
     "normal": {
-      "outputCutPct": -4.3,
+      "outputCutPct": 9.4,
       "turns": 3
     },
     "cte": {
-      "outputCutPct": 3.6,
+      "outputCutPct": 9.7,
       "turns": 3
     }
   }
