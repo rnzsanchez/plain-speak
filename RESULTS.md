@@ -1,51 +1,57 @@
 # Results
 
-## v2 — six models, three modes
+## v2 — nine models, three modes
 
-`node bench/run.mjs --turns 3`, 2026-07-25. Each cell is one real multi-turn session
-of 3 prompts from `bench/prompts.txt`. Output tokens per turn, and the cut against the
-same model with rules off.
+`node bench/run.mjs --turns 3`, 2026-07-25. Each cell is one real multi-turn session of
+3 prompts from `bench/prompts.txt`. Output tokens per turn, and the cut against the same
+model with rules off. Negative means the replies got **longer** with the rules on.
 
 | Model | off | `normal` | cut | `cte` | cut |
 |---|---:|---:|---:|---:|---:|
 | claude-opus-5 | 673 | 373 | **45%** | 321 | **52%** |
 | claude-sonnet-5 | 237 | 152 | **36%** | 97 | **59%** |
 | claude-haiku-4-5 | 535 | 483 | 10% | 507 | 5% |
+| gpt-5.6-sol | 340 | 393 | **−16%** | 306 | 10% |
+| gpt-5.6-terra | 281 | 293 | −4% | 271 | 4% |
+| gpt-5.6-luna | 449 | 515 | **−15%** | 449 | 0% |
 | gpt-5.5 | 335 | 334 | 0% | 314 | 6% |
-| gpt-5.4 | 404 | 426 | **−5%** | 463 | **−15%** |
+| gpt-5.4 | 404 | 426 | −5% | 463 | **−15%** |
 | gpt-5.4-mini | 635 | 588 | 7% | 772 | **−22%** |
-
-Negative means the replies got *longer* with the rules on.
 
 ## What this shows
 
-**It works on the large Claude models.** Opus 5 and Sonnet 5 both cut output
-substantially, and `cte` beat `normal` on both.
+**It works on the large Claude models, and only there.** Opus 5 and Sonnet 5 both cut
+output substantially in both modes. Nothing else came close.
 
-**It does close to nothing on the small ones.** Haiku 4.5 and gpt-5.5 landed between
-0% and 10%. Those models are already terse, so there is little to trim.
+**On the Claude small model it barely registers.** Haiku 4.5 landed at 10% and 5% —
+inside the noise of a 3-prompt sample.
 
-**On two models it backfired.** gpt-5.4 got longer in both modes, and gpt-5.4-mini's
-`cte` was 22% longer than no rules at all. Whatever `cte` does to a GPT model, it is
-not making it shorter.
+**On GPT models, `normal` consistently backfires.** Five of the six went *up*: −16% on
+gpt-5.6-sol, −15% on gpt-5.6-luna, −5% on gpt-5.4, −4% on gpt-5.6-terra, 0% on gpt-5.5.
+Only gpt-5.4-mini improved, at 7%. Whatever the `normal` ruleset does to a GPT model, it
+is not making it shorter — a plausible reading is that a list of style rules invites
+more structure and more hedging, but this data does not establish why.
 
-So the honest headline is *"45–59% on Opus and Sonnet, little or nothing elsewhere,
-worse on two GPT models"* — not a single number.
+**`cte` is the better bet on GPT, and still not a win.** It was flat or slightly better
+on the 5.5 and 5.6 family (0% to 10%), and clearly worse on the 5.4 pair (−15%, −22%).
+
+So there is no honest single headline. The defensible claim is: **45–59% on Opus and
+Sonnet, roughly nothing on Haiku, and no reliable gain on any GPT model.**
 
 ## What this does not show
 
-- **One run per cell.** Reply length varies between identical calls. A 5-point
-  difference here is noise; the 45–59% figures are large enough to trust as direction,
-  the 0–10% ones are not. Use `--repeat 5` for numbers worth quoting.
+- **One run per cell.** Reply length varies between identical calls. Treat anything under
+  about 10 points as noise; the 45–59% figures are large enough to trust as direction,
+  the rest are not. Use `--repeat 5` for numbers worth quoting.
 - **Three prompts, all general questions.** No code, no tool use, no long context —
   nothing like a real coding session, which is mostly tool traffic.
-- **Codex figures include reasoning tokens.** `codex exec` reports
-  `output_tokens` and `reasoning_output_tokens`; this run summed them, because both are
-  billed as output. Response rules do not govern how long a model *thinks*, so part of
-  the GPT movement above is reasoning effort rather than reply length. The harness now
-  records the two separately, so the next run can split them — these numbers cannot.
-- **No cost column.** Claude reports a price and Codex does not, and per-session
-  cache behaviour dominates the bill either way. Compare tokens, not dollars.
+- **Reasoning tokens.** Codex reports `output_tokens` and `reasoning_output_tokens`
+  separately and this table sums them, because both are billed as output. For the three
+  5.6 models the harness recorded them separately, and the visible-reply cut tracked the
+  billed cut within 3 points — so reasoning is not what is driving the GPT results. The
+  older six runs predate that split and cannot be broken down.
+- **No cost column.** Claude reports a price and Codex does not, and per-session cache
+  behaviour dominates the bill either way. Compare tokens, not dollars.
 
 ## Session continuity, measured
 

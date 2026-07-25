@@ -145,20 +145,27 @@ multiplied out into "you saved N tokens" — the benchmark measures short questi
 answer turns, while a real session is mostly tool traffic. Scaling one onto the other
 would invent a number. No benchmark for your model means no line at all.
 
-Measured cut in output, one 3-turn session per cell:
+---
+
+## Does it actually save tokens?
+
+Sometimes. Measured cut in output, one 3-turn session per cell. Negative means longer:
 
 | Model | `normal` | `cte` |
 |---|---:|---:|
-| claude-opus-5 | 45% | 52% |
-| claude-sonnet-5 | 36% | 59% |
+| claude-opus-5 | **45%** | **52%** |
+| claude-sonnet-5 | **36%** | **59%** |
 | claude-haiku-4-5 | 10% | 5% |
+| gpt-5.6-sol | −16% | 10% |
+| gpt-5.6-terra | −4% | 4% |
+| gpt-5.6-luna | −15% | 0% |
 | gpt-5.5 | 0% | 6% |
 | gpt-5.4 | −5% | −15% |
 | gpt-5.4-mini | 7% | −22% |
 
-It works on the big Claude models, does little on small ones, and made two GPT models
-*longer*. One run per cell, general questions only — read the caveats before quoting
-any of it.
+It works on the large Claude models and only there. On Haiku it barely registers, and on
+GPT models `normal` made five of six *longer*. Nine models, one run each, general
+questions — read the caveats before quoting any of it.
 
 → **[Method and caveats](./docs/benchmark.md)** · **[Full numbers](./RESULTS.md)**
 
@@ -169,7 +176,8 @@ any of it.
 It replaces nothing — a clean machine and one already full of plugins end up the same.
 What it costs: the npx route adds hook entries to your settings, two node starts per
 turn (~135 ms, nearly all of it interpreter startup), and a heuristic checker that will
-sometimes be wrong. On small models the saving can vanish entirely.
+sometimes be wrong. And on anything but Opus or Sonnet, the token saving may be nil or
+negative — check your own model before believing in it.
 
 → **[The honest downsides, in full](./docs/tradeoffs.md)**
 
