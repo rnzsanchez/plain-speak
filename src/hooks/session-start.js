@@ -3,7 +3,7 @@
 // SessionStart — inject the active mode's rules once. This is the only
 // unconditional injection; every later one has to be earned by a drift trip.
 
-const { run, rulesFor, emit } = require('./lib');
+const { run, rulesFor, inject } = require('./lib');
 const state = require('../state');
 
 run(({ sessionId }) => {
@@ -15,5 +15,5 @@ run(({ sessionId }) => {
   state.saveSession(sessionId, { ...session, mode }, store);
 
   const rules = rulesFor(mode);
-  if (rules) emit(`PLAIN-SPEAK MODE: ${mode}\n\n${rules}`);
+  if (rules) inject('SessionStart', `PLAIN-SPEAK MODE: ${mode}\n\n${rules}`);
 });

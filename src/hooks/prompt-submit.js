@@ -4,7 +4,7 @@
 // prompt. Rules go back in only when the Stop hook flagged drift, or when the
 // user switches mode mid-conversation.
 
-const { run, rulesFor, emit } = require('./lib');
+const { run, rulesFor, inject, notify } = require('./lib');
 const state = require('../state');
 const { LENGTH_REQUESTED } = require('../drift');
 
@@ -19,8 +19,12 @@ run(({ sessionId, prompt }) => {
   if (match) {
     const mode = state.writeMode(match[1]);
     state.saveSession(sessionId, { ...session, mode, drift: false, reason: null }, store);
-    if (mode === 'off') return emit('PLAIN-SPEAK: off. Rules no longer apply.');
-    return emit(`PLAIN-SPEAK MODE: ${mode}\n\n${rulesFor(mode)}`);
+    if (mode === 'off') return notify('UserPromptSubmit', 'plain-speak: off');
+    return notify(
+      'UserPromptSubmit',
+      `plain-speak: ${mode}`,
+      `PLAIN-SPEAK MODE: ${mode}\n\n${rulesFor(mode)}`
+    );
   }
 
   const mode = state.readMode();
@@ -42,7 +46,8 @@ run(({ sessionId, prompt }) => {
   state.bumpLifetime(store, { injections: 1 });
   state.saveSession(sessionId, next, store);
 
-  emit(
+  inject(
+    'UserPromptSubmit',
     `PLAIN-SPEAK: last reply drifted — ${session.reason}. Back to ${mode}.\n\n${rulesFor(mode)}`
   );
 });
