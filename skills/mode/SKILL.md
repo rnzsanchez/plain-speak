@@ -1,6 +1,6 @@
 ---
-name: plain-speak
-description: Turn plain-speak on, switch mode, or show where it stands.
+name: mode
+description: Turn plain-speak on, switch its mode, or show where it stands.
 disable-model-invocation: true
 argument-hint: "[off | normal | cte]"
 allowed-tools: Bash

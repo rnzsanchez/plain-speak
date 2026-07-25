@@ -50,6 +50,17 @@ cd plain-speak
 node bin/cli.js install
 ```
 
+## Command names differ by route
+
+A plugin install namespaces its commands, so the skills are named short. An npx
+install has no namespace to lean on, so they are prefixed on the way in — bare
+`/mode` and `/stats` would be rude to everything else on your machine.
+
+| Plugin | npx |
+|---|---|
+| `/plain-speak:mode` | `/plain-speak` |
+| `/plain-speak:stats` | `/plain-speak-stats` |
+
 ## What the npx installer writes
 
 | Path | What |

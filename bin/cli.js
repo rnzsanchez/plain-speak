@@ -38,7 +38,7 @@ function main() {
       if (both || has('--claude')) claude.install({ chainStatusline: has('--statusline') });
       if (both || has('--codex')) codex.install();
       if (!state.readSafe(state.modePath())) state.writeMode('normal');
-      console.log(`\nMode: ${state.readMode()}. Change it in a session: /plain-speak cte`);
+      console.log(`\nMode: ${state.readMode()}. Change it in a session: /plain-speak cte  (plugin installs: /plain-speak:mode cte)`);
       console.log('Restart Claude Code, or run /hooks once, to load the hooks.');
       return;
     }
@@ -57,11 +57,16 @@ function main() {
       let mode = state.readMode();
       if (wanted) mode = state.writeMode(wanted);
       else if (mode === 'off') mode = state.writeMode('normal');
+      // Plugin installs namespace the commands; standalone ones do not.
+      const plugin = Boolean(process.env.CLAUDE_PLUGIN_ROOT);
+      const cmd = plugin ? '/plain-speak:mode' : '/plain-speak';
+      const statsCmd = plugin ? '/plain-speak:stats' : '/plain-speak-stats';
       console.log(`plain-speak — ${mode}${mode === 'cte' ? ' 🧠' : ''}\n`);
-      console.log('  /plain-speak off       nothing injected, nothing checked');
-      console.log('  /plain-speak normal    plain voice, answer first, no fuss');
-      console.log('  /plain-speak cte       same voice at twelve — short, blunt');
-      console.log('  /plain-speak-stats     token and drift report');
+      const row = (left, right) => console.log(`  ${left.padEnd(26)}${right}`);
+      row(`${cmd} off`, 'nothing injected, nothing checked');
+      row(`${cmd} normal`, 'plain voice, answer first, no fuss');
+      row(`${cmd} cte`, 'same voice at twelve — short, blunt');
+      row(statsCmd, 'token and drift report');
       return;
     }
 

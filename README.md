@@ -89,15 +89,15 @@ Everything runs inside a session. Installing is the only thing you do in a shell
 
 | Command | What it does |
 |---|---|
-| `/plain-speak` | Turn it on and show where it stands |
-| `/plain-speak cte` | Switch mode — `off`, `normal`, `cte` |
-| `/plain-speak-stats` | Token and drift report: this session, and lifetime |
+| `/plain-speak:mode` | Turn it on and show where it stands |
+| `/plain-speak:mode cte` | Switch mode — `off`, `normal`, `cte` |
+| `/plain-speak:stats` | Token and drift report: this session, and lifetime |
 
-Same in both tools. Neither can be triggered by the model — only by you.
+Same in both tools. Neither can be triggered by the model — only by you. New commands
+load at the next session start.
 
-Installed as a plugin, they carry the plugin's namespace:
-`/plain-speak:plain-speak` and `/plain-speak:plain-speak-stats`. New commands load on
-the next session start.
+Installed with `npx` instead of as a plugin there is no namespace to lean on, so they
+arrive as `/plain-speak` and `/plain-speak-stats`.
 
 The badge shows what's live, next to your other plugin badges:
 

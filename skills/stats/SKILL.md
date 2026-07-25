@@ -1,5 +1,5 @@
 ---
-name: plain-speak-stats
+name: stats
 description: Token and drift report for plain-speak — this session plus lifetime.
 disable-model-invocation: true
 allowed-tools: Bash

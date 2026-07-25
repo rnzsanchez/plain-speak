@@ -32,7 +32,7 @@ node bench/report.mjs --write     # results table, and feed src/savings.json
 | `src/install/*.js` | Settings patching for each tool; `shared.js` holds what both need. |
 | `modes/*.md` | The rule text. `normal` is the base voice, `cte` is the same voice at twelve. |
 | `.claude-plugin/`, `hooks/` | Plugin + marketplace manifests. A plugin install needs no `settings.json` edits and no runtime copy, because `${CLAUDE_PLUGIN_ROOT}` is already stable. |
-| `skills/` | Two commands: `/plain-speak` (status and mode switch) and `/plain-speak-stats`. |
+| `skills/` | Two commands, named short (`mode`, `stats`) because a plugin install namespaces them as `/plain-speak:mode`. `copySkills()` prefixes them for npx installs, where there is no namespace, and rewrites the frontmatter `name` to match the directory — the two must agree. |
 | `docs/` | Install, checker, benchmark, tradeoffs. The README links out rather than growing. |
 
 Claude Code and Codex fire the same three events with near-identical payloads, so
@@ -55,6 +55,8 @@ on Codex.
   cooldown compares against `turns - 1`. Off-by-one here means it nags every turn.
 - **Only walls count as prose paragraphs** (2+ sentences and 25+ words). Counting
   every prose block made `cte` flag replies as short as "Done."
+- **Skill directory name and frontmatter `name` must match.** `copySkills()` renames
+  both together. Change one without the other and the command silently fails to load.
 - **The badge script must keep its `*-statusline.sh` name.** Statuslines that render
   plugin badges find it by globbing that pattern under the plugin's install path.
   Renaming it makes the badge silently vanish for plugin users.

@@ -26,17 +26,31 @@ function copyRuntime() {
   return dir;
 }
 
-// Slash commands. Every one is namespaced and marked disable-model-invocation, so
-// they only ever run when the user asks for them.
+// A plugin install already namespaces commands as /plain-speak:<name>, so the skills
+// are named short — `mode`, `stats`. A standalone install has no namespace, so bare
+// `/mode` and `/stats` would be rude to everything else on the machine: prefix them
+// on the way in, and rewrite the frontmatter name to match the directory.
+const STANDALONE_NAMES = { mode: 'plain-speak', stats: 'plain-speak-stats' };
+const standaloneName = (name) => STANDALONE_NAMES[name] || `plain-speak-${name}`;
+
 function copySkills(targetSkillsDir) {
   const src = path.join(PKG_ROOT, 'skills');
-  const names = fs.readdirSync(src);
-  for (const name of names) {
-    const dest = path.join(targetSkillsDir, name);
+  const installed = [];
+  for (const name of fs.readdirSync(src)) {
+    const renamed = standaloneName(name);
+    const dest = path.join(targetSkillsDir, renamed);
     fs.rmSync(dest, { recursive: true, force: true });
     fs.cpSync(path.join(src, name), dest, { recursive: true });
+
+    const skillFile = path.join(dest, 'SKILL.md');
+    const body = fs.readFileSync(skillFile, 'utf8').replace(
+      new RegExp(`^name: ${name}$`, 'm'),
+      `name: ${renamed}`
+    );
+    fs.writeFileSync(skillFile, body);
+    installed.push(renamed);
   }
-  return names;
+  return installed;
 }
 
 function removeSkills(targetSkillsDir) {
@@ -82,6 +96,7 @@ function writeJson(file, data) {
 
 module.exports = {
   PKG_ROOT,
+  standaloneName,
   HOOK_EVENTS,
   runtimeDir,
   copyRuntime,
