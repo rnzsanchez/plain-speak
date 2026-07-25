@@ -56,6 +56,11 @@ you want the saving.
 
 ## Failure behaviour
 
-Every hook is wrapped and always exits 0. A crash inside plain-speak is silent and
-costs you nothing but the check — it cannot break a session, block a tool call, or
-stop a turn.
+Every hook is wrapped and always exits 0. A crash inside plain-speak costs you nothing
+but the check — it cannot break a session, block a tool call, or stop a turn.
+
+That silence hides bugs, so there is a way to see them:
+
+```sh
+PLAIN_SPEAK_DEBUG=1 claude   # hook errors go to stderr and the harness debug log
+```

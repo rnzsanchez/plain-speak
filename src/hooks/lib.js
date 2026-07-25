@@ -66,12 +66,17 @@ function notify(hookEventName, message, context) {
   );
 }
 
-// A hook that throws is a hook that breaks someone's session. Everything is
-// wrapped, and every path exits 0.
+// A hook that throws is a hook that breaks someone's session, so everything is wrapped
+// and every path exits 0. Silence makes bugs invisible, though — PLAIN_SPEAK_DEBUG=1
+// puts the error on stderr, which the harness shows in its debug log.
 function run(fn) {
   try {
     fn(normalize(readInput()));
-  } catch {}
+  } catch (err) {
+    if (process.env.PLAIN_SPEAK_DEBUG === '1') {
+      process.stderr.write(`plain-speak hook failed: ${err && err.stack ? err.stack : err}\n`);
+    }
+  }
   process.exit(0);
 }
 
