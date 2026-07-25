@@ -38,5 +38,25 @@
       "outputCutPct": -14.6,
       "turns": 3
     }
+  },
+  "gpt-5.4-mini": {
+    "normal": {
+      "outputCutPct": 7.4,
+      "turns": 3
+    },
+    "cte": {
+      "outputCutPct": -21.6,
+      "turns": 3
+    }
+  },
+  "gpt-5.5": {
+    "normal": {
+      "outputCutPct": 0.3,
+      "turns": 3
+    },
+    "cte": {
+      "outputCutPct": 6.3,
+      "turns": 3
+    }
   }
 }

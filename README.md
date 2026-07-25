@@ -148,7 +148,22 @@ multiplied out into "you saved N tokens" — the benchmark measures short questi
 answer turns, while a real session is mostly tool traffic. Scaling one onto the other
 would invent a number. No benchmark for your model means no line at all.
 
-→ **[Measuring it yourself](./docs/benchmark.md)** · **[Current numbers](./RESULTS.md)**
+Measured cut in output, one 3-turn session per cell:
+
+| Model | `normal` | `cte` |
+|---|---:|---:|
+| claude-opus-5 | 45% | 52% |
+| claude-sonnet-5 | 36% | 59% |
+| claude-haiku-4-5 | 10% | 5% |
+| gpt-5.5 | 0% | 6% |
+| gpt-5.4 | −5% | −15% |
+| gpt-5.4-mini | 7% | −22% |
+
+It works on the big Claude models, does little on small ones, and made two GPT models
+*longer*. One run per cell, general questions only — read the caveats before quoting
+any of it.
+
+→ **[Method and caveats](./docs/benchmark.md)** · **[Full numbers](./RESULTS.md)**
 
 ---
 

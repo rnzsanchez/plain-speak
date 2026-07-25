@@ -6,7 +6,7 @@ Both sides, measured where measurement was possible.
 
 | Upside | Grounding |
 |---|---|
-| Shorter answers on the big models | Measured on 3-prompt sessions: Opus 5 cut output 45% (`normal`) and 52% (`cte`); Sonnet 5 cut 36% and 59%. Smaller models gain far less, and one got worse — see the cost table and [RESULTS.md](../RESULTS.md). |
+| Shorter answers on the big models | Measured, one 3-turn session per cell: Opus 5 cut output 45% (`normal`) and 52% (`cte`); Sonnet 5 cut 36% and 59%. Smaller models gained little and two GPT models got worse — full table in [RESULTS.md](../RESULTS.md). |
 | The rules keep working | The point of the thing. Injected once, then re-sent only when a reply stops matching the mode — not on every prompt. |
 | Checking costs no tokens | It is a text scan inside a `Stop` hook. No model call, nothing added to context. |
 | Invisible | Verdicts and reinjections reach the model with `suppressOutput`, so nothing lands in your transcript. Asserted in `test/hooks.test.mjs`. |
@@ -24,8 +24,9 @@ Both sides, measured where measurement was possible.
 | The badge re-renders as you type | Measured at 27 ms, against 25 ms for `bash -c :`. Builtins only, one small file read, so roughly 2 ms is ours. |
 | The checker is a heuristic | It will sometimes miss a fussy reply and sometimes flag one that needed a long sentence — `cte` more, since it trips on a single hit. Quoting a phrase no longer counts as using it, which removed the biggest false-positive source. |
 | Terser is not always better | A short answer can drop context you wanted. `cte` especially. Use `normal`, or ask for detail and the checker stands down. |
-| It does not always help | Measured: on Haiku 4.5 the cut was only 10% (`normal`) and 5% (`cte`). On `gpt-5.4` both modes came out **longer** than rules-off — −5% and −15%. A 3-prompt sample is noisy, but the direction is real: do not assume the Opus figures carry over to your model. |
+| It does not always help | Measured: Haiku 4.5 cut 10%/5%, gpt-5.5 0%/6%. On gpt-5.4 both modes came out **longer** (−5%, −15%), and gpt-5.4-mini's `cte` was **22% longer** than no rules at all. Do not assume the Opus figures carry over to your model — check yours. |
 | Codex asks for trust | Hooks must be trusted on first run. The installer does not bypass that prompt for you. |
+| A benchmark run changes your live mode | It writes the global mode flag and restores it on exit. While it runs, your own sessions are scored against whatever mode the benchmark is testing. |
 | Node 18+ on `PATH` | No dependencies, but the hooks need node. |
 
 ## Privacy
