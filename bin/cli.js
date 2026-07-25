@@ -13,6 +13,7 @@ const USAGE = `plain-speak — terse-response modes with an active hygiene check
 
   plain-speak install [--claude] [--codex]   wire up hooks and slash commands
   plain-speak install --statusline           also chain the badge onto your statusline
+  plain-speak commands                       install /plain-speak and /plain-speak-stats only
   plain-speak uninstall [--claude|--codex]   remove what it added
   plain-speak uninstall --purge              …and delete the mode and stats too
   plain-speak status [mode] [--project]      show status, or switch mode (--project pins this repo)
@@ -44,6 +45,15 @@ function main() {
       return;
     }
 
+    // Plugin skills are always namespaced (/plain-speak:mode). Bare /plain-speak only
+    // exists as a user-level skill, so this installs those copies without touching hooks.
+    case 'commands': {
+      const names = claude.installCommands();
+      console.log(`installed: ${names.map((n) => `/${n}`).join(' ')}`);
+      console.log('They load at the next session start, or after /reload-skills.');
+      return;
+    }
+
     case 'uninstall': {
       const both = !has('--claude') && !has('--codex');
       if (both || has('--claude')) claude.uninstall({ keepRuntime: has('--claude') });
@@ -70,23 +80,27 @@ function main() {
         mode = state.writeMode('normal');
         source = state.modeSource();
       }
-      // Plugin installs namespace the commands; standalone ones do not.
-      const plugin = Boolean(process.env.CLAUDE_PLUGIN_ROOT);
-      const cmd = plugin ? '/plain-speak:mode' : '/plain-speak';
-      const statsCmd = plugin ? '/plain-speak:stats' : '/plain-speak-stats';
-      console.log(
-        `plain-speak — ${mode}${mode === 'cte' ? ' 🧠' : ''}${source === 'global' ? '' : ` (from ${source})`}\n`
-      );
-      const rows = [
-        [`${cmd} off`, 'nothing injected, nothing checked'],
-        [`${cmd} normal`, 'plain voice, answer first, no fuss'],
-        [`${cmd} cte`, 'same voice at twelve — short, blunt'],
-        [statsCmd, 'token and drift report'],
-      ];
-      if (source === 'global') rows.push([`${cmd} cte --project`, 'pin this project only']);
-      // Width from the longest label, since the plugin prefix makes them longer.
-      const width = Math.max(...rows.map(([left]) => left.length)) + 2;
-      for (const [left, right] of rows) console.log(`  ${left.padEnd(width)}${right}`);
+      // Name the commands the user actually has. CLAUDE_PLUGIN_ROOT is not exported to
+      // skill Bash calls, so checking for the bare user-level command is the only
+      // reliable signal — and the bare form wins when both exist.
+      const bare = claude.hasBareCommands();
+      const cmd = bare ? '/plain-speak' : '/plain-speak:mode';
+
+      // Show what each mode sounds like rather than describing it. Same question, three
+      // answers — that is the whole decision the user is making here.
+      const SAMPLES = {
+        off: 'Great question! Force-pushing is generally risky…',
+        normal: 'No. Rewrites shared history. Use --force-with-lease.',
+        cte: 'No. Breaks other clones. --force-with-lease.',
+      };
+
+      console.log(`plain-speak — ${mode}${mode === 'cte' ? ' 🧠' : ''}\n`);
+      console.log('  "Is it safe to force-push to a shared branch?"\n');
+      const width = Math.max(...Object.keys(SAMPLES).map((m) => `${cmd} ${m}`.length)) + 2;
+      for (const [m, sample] of Object.entries(SAMPLES)) {
+        const marker = m === mode ? '▸' : ' ';
+        console.log(`  ${marker} ${`${cmd} ${m}`.padEnd(width)}${sample}`);
+      }
       return;
     }
 

@@ -110,9 +110,23 @@ function doctor() {
   console.log(`  ${cmd.includes('plain-speak') ? 'ok  ' : 'none'} statusline badge`);
   for (const name of ['plain-speak', 'plain-speak-stats']) {
     const there = fs.existsSync(path.join(skillsDir(), name, 'SKILL.md'));
-    console.log(`  ${there ? 'ok  ' : 'MISS'} /${name}`);
+    console.log(`  ${there ? 'ok  ' : 'none'} /${name}`);
+  }
+  if (!hasBareCommands()) {
+    console.log('  commands come from the plugin as /plain-speak:mode and /plain-speak:stats');
+    console.log('  run `plain-speak commands` if you want the bare /plain-speak form');
   }
   console.log(`  mode: ${state.readMode()}`);
 }
 
-module.exports = { install, uninstall, doctor };
+// Bare-named commands, installed on their own. A plugin cannot provide these: plugin
+// skills always carry the plugin's namespace, so /plain-speak <mode> has to come from a
+// user-level skill.
+function installCommands() {
+  fs.mkdirSync(skillsDir(), { recursive: true });
+  return copySkills(skillsDir());
+}
+
+const hasBareCommands = () => fs.existsSync(path.join(skillsDir(), 'plain-speak', 'SKILL.md'));
+
+module.exports = { install, uninstall, doctor, installCommands, hasBareCommands };

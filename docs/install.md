@@ -52,14 +52,24 @@ node bin/cli.js install
 
 ## Command names differ by route
 
-A plugin install namespaces its commands, so the skills are named short. An npx
-install has no namespace to lean on, so they are prefixed on the way in — bare
-`/mode` and `/stats` would be rude to everything else on your machine.
+Claude Code namespaces every command a plugin provides, so a plugin-only install cannot
+give you a bare `/plain-speak`. The npx installer places user-level commands, which can.
 
-| Plugin | npx |
-|---|---|
-| `/plain-speak:mode` | `/plain-speak` |
-| `/plain-speak:stats` | `/plain-speak-stats` |
+| | Plugin only | With user-level commands |
+|---|---|---|
+| Switch mode | `/plain-speak:mode cte` | `/plain-speak cte` |
+| Stats | `/plain-speak:stats` | `/plain-speak-stats` |
+
+To get the shorter form without changing hooks, badge or anything else:
+
+```sh
+npx github:rnzsanchez/plain-speak commands
+```
+
+Both forms can coexist; the shorter one wins in the help output. Inside the package the
+skills are named `mode` and `stats`, and they are prefixed to `plain-speak` and
+`plain-speak-stats` when copied to user level — bare `/mode` and `/stats` would be rude
+to everything else on your machine.
 
 ## What the npx installer writes
 

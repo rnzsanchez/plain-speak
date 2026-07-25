@@ -89,15 +89,21 @@ Everything runs inside a session. Installing is the only thing you do in a shell
 
 | Command | What it does |
 |---|---|
-| `/plain-speak:mode` | Turn it on and show where it stands |
-| `/plain-speak:mode cte` | Switch mode — `off`, `normal`, `cte` |
-| `/plain-speak:stats` | Token and drift report: this session, and lifetime |
+| `/plain-speak` | Turn it on and show where it stands |
+| `/plain-speak cte` | Switch mode — `off`, `normal`, `cte` |
+| `/plain-speak-stats` | Token and drift report: this session, and lifetime |
 
-Same in both tools. Neither can be triggered by the model — only by you. New commands
-load at the next session start.
+Same in both tools. Neither can be triggered by the model — only by you. They load at
+the next session start.
 
-Installed with `npx` instead of as a plugin there is no namespace to lean on, so they
-arrive as `/plain-speak` and `/plain-speak-stats`.
+The npx installer sets these up. A plugin cannot: plugin commands always carry the
+plugin's namespace, so a plugin-only install gives you `/plain-speak:mode` and
+`/plain-speak:stats` instead. One shell command swaps in the shorter form without
+touching anything else:
+
+```sh
+npx github:rnzsanchez/plain-speak commands
+```
 
 A badge showing the active mode is available for your statusline, if you use one that
 renders plugin badges. Switching to `off` hides it.
