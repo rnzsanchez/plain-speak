@@ -6,6 +6,19 @@ never see it. It scores the reply, records a verdict, and stops.
 It never blocks the turn. Making the model spend a whole extra turn being told to
 be shorter would cost more than the drift did.
 
+```mermaid
+flowchart TD
+    R["the reply"] --> E{"exempt?<br/>asked for detail · mostly code · plan mode"}
+    E -->|"yes"| Q["no verdict, nothing recorded"]
+    E -->|"no"| S["score it — one point per tone hit"]
+    S --> T{"points ≥ the mode's threshold?"}
+    T -->|"no"| C["clean · next prompt carries nothing"]
+    T -->|"yes"| D["drift · next prompt carries the rules"]
+    D --> B{"past the backoff threshold?"}
+    B -->|"no"| F["full rules, next turn (~200 tok)"]
+    B -->|"yes"| N["one-line nudge, 4 turns later (~30 tok)"]
+```
+
 ## What it scores
 
 Tone, not length. A long, complete answer is fine. A fussy one is not.
@@ -74,7 +87,6 @@ A clean reply means there is nothing to correct, so nothing is sent at all.
 
 ```sh
 PLAIN_SPEAK_BACKOFF_AFTER=1 claude   # ease off almost immediately
-PLAIN_SPEAK_MAX_RETRIES=3 claude     # a hard ceiling instead
 ```
 
 ## What it costs to run

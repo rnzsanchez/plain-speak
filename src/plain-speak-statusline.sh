@@ -4,7 +4,7 @@
 #
 # Chain it into your existing statusline rather than replacing it:
 #   "statusLine": { "type": "command",
-#     "command": "bash ~/.claude/plain-speak/statusline.sh; bash ~/my-statusline.sh" }
+#     "command": "bash ~/.claude/plain-speak/src/plain-speak-statusline.sh; bash ~/mine.sh" }
 
 # A project can pin its own mode; otherwise the global one applies.
 FLAG="./.plain-speak-mode"

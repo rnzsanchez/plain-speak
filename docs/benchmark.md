@@ -1,6 +1,7 @@
 # Measuring it
 
-Run these from a clone, or from the plugin's install directory — both carry `bench/`.
+Run these from a clone, or from the plugin's install directory. Both carry `bench/`; the
+npm package does not, because the raw results are 100 KB nobody installing it needs.
 
 ```sh
 node bench/run.mjs --dry-run                            # plan and cost, zero calls

@@ -2,6 +2,14 @@
 
 Three ways in. Pick one.
 
+```mermaid
+flowchart LR
+    Q{"which tools?"} -->|"Claude Code only"| P["plugin<br/>no settings edits, badge automatic"]
+    Q -->|"Codex, or both"| N["npx installer<br/>hooks in settings.json + ~/.codex"]
+    P --> C1["/plain-speak:mode · /plain-speak:stats"]
+    N --> C2["/plain-speak · /plain-speak-stats<br/>(skipped if the plugin is already enabled)"]
+```
+
 ## Plugin (Claude Code)
 
 The cleanest option: no edits to your `settings.json` at all, and the badge is
@@ -55,21 +63,18 @@ node bin/cli.js install
 Claude Code namespaces every command a plugin provides, so a plugin-only install cannot
 give you a bare `/plain-speak`. The npx installer places user-level commands, which can.
 
-| | Plugin only | With user-level commands |
+| | Plugin | npx |
 |---|---|---|
 | Switch mode | `/plain-speak:mode cte` | `/plain-speak cte` |
 | Stats | `/plain-speak:stats` | `/plain-speak-stats` |
 
-To get the shorter form without changing hooks, badge or anything else:
+You never get both. If the plugin is enabled in `~/.claude/settings.json`, the npx
+installer wires the hooks and leaves the commands to the plugin — two copies of the same
+two commands is only clutter in the picker.
 
-```sh
-npx github:rnzsanchez/plain-speak commands
-```
-
-Both forms can coexist; the shorter one wins in the help output. Inside the package the
-skills are named `mode` and `stats`, and they are prefixed to `plain-speak` and
-`plain-speak-stats` when copied to user level — bare `/mode` and `/stats` would be rude
-to everything else on your machine.
+Inside the package the skills are named `mode` and `stats`, and they are prefixed to
+`plain-speak` and `plain-speak-stats` when copied to user level — bare `/mode` and
+`/stats` would be rude to everything else on your machine.
 
 ## What the npx installer writes
 
@@ -77,10 +82,10 @@ to everything else on your machine.
 |---|---|
 | `~/.claude/plain-speak/` | Runtime copy, mode file, `state.json` |
 | `~/.claude/settings.json` | Three hook entries, added alongside whatever is already there. Backed up to `.plain-speak-backup` first |
-| `~/.claude/skills/plain-speak*/` | The four slash commands |
+| `~/.claude/skills/plain-speak*/` | The two slash commands — skipped when the plugin is enabled |
 | `~/.codex/hooks.json` | The same three hooks |
 | `~/.codex/config.toml` | `[features] hooks = true`, if not already set |
-| `~/.codex/skills/plain-speak*/` | The four slash commands |
+| `~/.codex/skills/plain-speak*/` | The two slash commands |
 
 Nothing existing is replaced or removed. Reinstalling is safe and does not duplicate
 hooks.

@@ -12,7 +12,7 @@ Both sides, measured where measurement was possible.
 | Invisible | Verdicts and reinjections reach the model with `suppressOutput`, so nothing lands in your transcript. Asserted in `test/hooks.test.mjs`. |
 | It replaces nothing | Only hook entries whose own command contains `plain-speak` are ever touched. A clean machine and a plugin-loaded one end up in the same state. |
 | Per-project modes | A `.plain-speak-mode` file pins one repo; `PLAIN_SPEAK_MODE` overrides for one shell. Neither disturbs your global setting. |
-| Nothing to trust but Node | Zero dependencies, one bash script, about 1,300 lines of source in total. |
+| Nothing to trust but Node | Zero dependencies, one bash script, about 1,000 lines of source in total. |
 | Reversible | `uninstall` restores your settings from the backup; `uninstall --purge` removes the data too. |
 
 ## What it costs
@@ -27,7 +27,7 @@ Both sides, measured where measurement was possible.
 | On most models it does not help | Measured across nine: Haiku 4.5 cut only 10%/5%. On GPT models `normal` made **five of six longer** (−16% to 0%), and `cte` was worse still on the 5.4 pair (−15%, −22%). Only Opus and Sonnet showed a real gain. Check your own model rather than assuming — `node bench/run.mjs --models <yours>`. |
 | Codex asks for trust | Hooks must be trusted on first run. The installer does not bypass that prompt for you. |
 | A benchmark run changes your live mode | It writes the global mode flag and restores it on exit. While it runs, your own sessions are scored against whatever mode the benchmark is testing. |
-| Node 18+ on `PATH` | No dependencies, but the hooks need node. |
+| Node 22+ on `PATH` | No dependencies, but the hooks need node. |
 
 ## Privacy
 
