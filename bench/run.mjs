@@ -125,10 +125,13 @@ function runClaude(prompt, model, sessionId, env) {
 function runCodex(prompt, model, threadId, env) {
   // --skip-git-repo-check: benchmark prompts are generic questions, so the run may
   // sit anywhere. Without it Codex refuses outright ("not inside a trusted directory").
-  const sandbox = ['-s', 'workspace-write'];
+  // No --sandbox flag: `codex exec` accepts `-s` but `codex exec resume` does not, so
+  // passing it makes turn 1 succeed and every later turn of the same session die with
+  // "unexpected argument '-s'". The prompts are questions and call no tools, so the
+  // default policy is fine — and identical on every turn, which matters more.
   const args = threadId
-    ? ['exec', 'resume', threadId, '--json', '--skip-git-repo-check', ...sandbox, '-m', model, prompt]
-    : ['exec', '--json', '--skip-git-repo-check', ...sandbox, '-m', model, prompt];
+    ? ['exec', 'resume', threadId, '--json', '--skip-git-repo-check', '-m', model, prompt]
+    : ['exec', '--json', '--skip-git-repo-check', '-m', model, prompt];
 
   // stdio stdin MUST be 'ignore'. With a pipe, `codex exec` treats stdin as extra
   // prompt input and blocks waiting for EOF — it prints "Reading additional input
