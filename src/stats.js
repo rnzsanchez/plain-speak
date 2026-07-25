@@ -12,9 +12,6 @@ function fromTranscript(file) {
   const totals = {
     replies: 0,
     outputTokens: 0,
-    inputTokens: 0,
-    cacheRead: 0,
-    cacheCreate: 0,
     model: null,
   };
   let lines;
@@ -42,9 +39,6 @@ function fromTranscript(file) {
     const u = row.message.usage || {};
     totals.replies += 1;
     totals.outputTokens += u.output_tokens || 0;
-    totals.inputTokens += u.input_tokens || 0;
-    totals.cacheRead += u.cache_read_input_tokens || 0;
-    totals.cacheCreate += u.cache_creation_input_tokens || 0;
     totals.model = row.message.model || totals.model;
   }
   return totals;
@@ -167,4 +161,4 @@ function format(r) {
   return out.join('\n');
 }
 
-module.exports = { fromTranscript, rulesTokens, report, format };
+module.exports = { report, format };

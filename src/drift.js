@@ -135,7 +135,7 @@ function check({
   // submit time and passes the boolean through — no prompt text is stored.
   lengthRequested = false,
 } = {}) {
-  const clean = { drift: false, reason: null, points: 0, hits: [] };
+  const clean = { drift: false, reason: null, points: 0 };
   const threshold = THRESHOLDS[mode];
   if (!threshold) return { ...clean, exempt: 'mode-off' };
   if (permissionMode === 'plan') return { ...clean, exempt: 'plan-mode' };
@@ -173,15 +173,14 @@ function check({
   }
 
   if (hits.length < threshold.points) {
-    return { ...clean, exempt: null, points: hits.length, hits };
+    return { ...clean, exempt: null, points: hits.length };
   }
   return {
     drift: true,
     reason: hits.slice(0, 3).join('; '),
     exempt: null,
     points: hits.length,
-    hits,
   };
 }
 
-module.exports = { check, THRESHOLDS, MARKERS, LENGTH_REQUESTED };
+module.exports = { check, LENGTH_REQUESTED };

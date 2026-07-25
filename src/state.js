@@ -8,7 +8,7 @@ const path = require('path');
 const os = require('os');
 
 const MODES = ['off', 'normal', 'cte'];
-const ALIASES = { max: 'cte', on: 'normal', default: 'normal' };
+const ALIASES = { max: 'cte', on: 'normal' };
 // No cap: one that runs out stops correcting a model that is still drifting. Instead
 // there is a threshold. Under it, correct on the next turn. Over it, back right off —
 // wait several turns and send a one-line nudge instead of the whole ruleset. Repeated
@@ -17,10 +17,6 @@ const ALIASES = { max: 'cte', on: 'normal', default: 'normal' };
 const BACKOFF_AFTER = Number(process.env.PLAIN_SPEAK_BACKOFF_AFTER || 3);
 const COOLDOWN_TURNS = 1;
 const EASED_COOLDOWN_TURNS = 4;
-const MAX_RETRIES = process.env.PLAIN_SPEAK_MAX_RETRIES
-  ? Number(process.env.PLAIN_SPEAK_MAX_RETRIES)
-  : Infinity;
-
 // Past the threshold plain-speak stops being aggressive: longer gap, shorter nudge.
 const easedOff = (session) => session.injections >= BACKOFF_AFTER;
 const cooldownFor = (session) => (easedOff(session) ? EASED_COOLDOWN_TURNS : COOLDOWN_TURNS);
@@ -108,14 +104,11 @@ const BLANK_SESSION = {
   trips: 0,
   injections: 0,
   lastInjectTurn: -1,
-  cleanStreak: 0,
   mode: null,
-  startedAt: null,
   updatedAt: null,
 };
 
 const BLANK_STORE = {
-  version: 1,
   lastSessionId: null,
   lifetime: { turns: 0, trips: 0, injections: 0, sessions: 0 },
   sessions: {},
@@ -158,10 +151,7 @@ function saveSession(id, session, store = readStore()) {
   const isNew = !store.sessions[key];
   const bench = isBenchmark();
   store.sessions[key] = { ...session, bench, updatedAt: Date.now() };
-  if (isNew) {
-    store.sessions[key].startedAt = session.startedAt || Date.now();
-    if (!bench) store.lifetime.sessions += 1;
-  }
+  if (isNew && !bench) store.lifetime.sessions += 1;
   // Remembered so `stats` never reports a throwaway benchmark session as yours.
   if (!bench) store.lastSessionId = key;
   writeStore(store);
@@ -182,7 +172,7 @@ function bumpLifetime(store, patch) {
 
 // Drift alone is not enough to reinject. The cooldown stops two corrections landing
 // back to back, and widens once the threshold is crossed.
-function shouldReinject(session, maxRetries = MAX_RETRIES) {
+function shouldReinject(session, maxRetries = Infinity) {
   if (!session.drift) return false;
   if (session.injections >= maxRetries) return false;
   // lastInjectTurn is the completed-turn count at the moment we injected, so a gap of
@@ -197,39 +187,28 @@ function recordTurn(session, verdict) {
     next.drift = true;
     next.reason = verdict.reason;
     next.trips = session.trips + 1;
-    next.cleanStreak = 0;
   } else {
     next.drift = false;
     next.reason = null;
-    next.cleanStreak = session.cleanStreak + 1;
   }
   return next;
 }
 
 module.exports = {
-  MODES,
-  MAX_RETRIES,
-  BACKOFF_AFTER,
   easedOff,
   cooldownFor,
   claudeDir,
   homeDir,
   modePath,
-  storePath,
-  normalizeMode,
   readMode,
   writeMode,
   modeSource,
   writeProjectMode,
-  PROJECT_FILE,
   readStore,
-  writeStore,
   readSession,
   saveSession,
   bumpLifetime,
-  isBenchmark,
   shouldReinject,
   recordTurn,
-  writeSafe,
   readSafe,
 };

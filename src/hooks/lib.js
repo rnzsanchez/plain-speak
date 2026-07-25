@@ -32,8 +32,6 @@ function normalize(data) {
     reply: data.last_assistant_message || '',
     permissionMode: data.permission_mode || '',
     cwd: data.cwd || process.cwd(),
-    transcriptPath: data.transcript_path || '',
-    source: data.source || '',
   };
 }
 
@@ -84,4 +82,4 @@ function run(fn) {
   process.exit(0);
 }
 
-module.exports = { run, rulesFor, inject, notify, normalize, readInput };
+module.exports = { run, rulesFor, inject, notify };

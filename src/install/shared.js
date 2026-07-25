@@ -89,8 +89,6 @@ function writeJson(file, data) {
 }
 
 module.exports = {
-  PKG_ROOT,
-  standaloneName,
   HOOK_EVENTS,
   runtimeDir,
   copyRuntime,

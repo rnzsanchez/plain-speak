@@ -3,7 +3,7 @@
 // readable summary that `plain-speak stats` reads to show real savings.
 //
 //   node bench/report.mjs            print the table
-//   node bench/report.mjs --write    also update bench/savings.json
+//   node bench/report.mjs --write    also update src/savings.json
 
 import fs from 'node:fs';
 import path from 'node:path';
@@ -48,7 +48,6 @@ for (const [model, modes] of byModel) {
       base: base ? base.outputPerTurn : null,
       cut,
       visibleCut,
-      cost: run.costUsd,
     });
     if (cut != null) {
       savings[model] = savings[model] || {};
