@@ -113,6 +113,17 @@ The results are strongly model-dependent and the docs must keep saying so: 45–
 Opus 5 and Sonnet 5, ~10% or less on Haiku 4.5, and nothing reliable on GPT — `normal`
 made five of six GPT models longer. Do not reintroduce a single headline number.
 
+## Memory
+
+`lore` is the memory store for this repo. Use it, not an ad-hoc note file:
+
+- `lore recall '<task>'` before non-trivial work here, ahead of reading project files.
+- `lore log` for anything durable as it lands — a decision, a preference, a trap, a
+  correction — and whenever the user says to remember, save or note something.
+- `lore guide` for the save/recall rules; `/lore:handoff` at the end of a session.
+
+Skip it only for trivial mechanical edits.
+
 ## Commit style
 
 Single-line messages, `type: subject` (`feat:`, `fix:`, `docs:`). No body, no
