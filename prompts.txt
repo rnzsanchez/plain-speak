@@ -1,0 +1,10 @@
+What is the difference between a git merge and a git rebase?
+Should I use a UUID or an auto-increment integer for a primary key?
+Explain what a database index does.
+Is Redis a good fit for a session store?
+How do I check which process is using port 3000 on macOS?
+What does the `defer` keyword do in Go?
+Should I put my API keys in environment variables or a secrets manager?
+Explain the difference between TCP and UDP.
+What is the point of a CDN?
+Is it safe to force-push to a shared branch?
