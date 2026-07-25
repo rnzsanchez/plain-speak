@@ -30,7 +30,7 @@ node bench/report.mjs --write     # results table, and feed src/savings.json
 | `src/state.js` | Mode flag + counters. Everything under `~/.claude/plain-speak/`. |
 | `src/hooks/*.js` | `SessionStart` injects once, `UserPromptSubmit` usually injects nothing, `Stop` scores and records. |
 | `src/install/*.js` | Settings patching for each tool; `shared.js` holds what both need. |
-| `modes/*.md` | The rule text. `normal` is the base voice, `cte` is caveman at twelve. |
+| `modes/*.md` | The rule text. `normal` is the base voice, `cte` is the same voice at twelve. |
 
 Claude Code and Codex fire the same three events with near-identical payloads, so
 one set of hook scripts serves both. `src/hooks/lib.js` normalizes the one

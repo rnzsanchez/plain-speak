@@ -86,7 +86,7 @@ npx plain-speak uninstall           # puts your settings back
 </tr>
 <tr>
 <td><code>cte</code> 🧠</td>
-<td>Caveman, turned to twelve. Short. Blunt. Fragments.</td>
+<td>Turned to twelve. Short. Blunt. Fragments.</td>
 </tr>
 </table>
 
@@ -238,7 +238,7 @@ commands are namespaced and flagged so the model can never invoke them.
 | `UserPromptSubmit` hook | Injects **nothing**, unless drift was flagged or you switched mode |
 | `Stop` hook | Scores the reply, records the verdict, prints nothing, never blocks |
 | `src/drift.js` | The checker. Pure functions, fully unit-tested |
-| `src/statusline.sh` | The badge |
+| `src/plain-speak-statusline.sh` | The badge |
 | `~/.claude/plain-speak/` | Runtime, mode, state — one folder |
 
 Codex fires the same three events with the same payloads, so the same scripts serve
