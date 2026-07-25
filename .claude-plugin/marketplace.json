@@ -1,0 +1,17 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "plain-speak",
+  "description": "Response rules that check themselves — reinjected only when the model drifts.",
+  "owner": {
+    "name": "Renz Sanchez",
+    "url": "https://github.com/rnzsanchez"
+  },
+  "plugins": [
+    {
+      "name": "plain-speak",
+      "description": "Plain, terse answers that stay plain. A silent checker scores every reply and puts the rules back only when they slip.",
+      "source": "./",
+      "category": "productivity"
+    }
+  ]
+}
