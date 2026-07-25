@@ -19,6 +19,12 @@
 4. No buzzwords.
 5. No filler.
 
+## Voice
+1. Sound like a person, not a product.
+2. Full thoughts are fine. Fussy sentences are not.
+3. No throat-clearing, no wrap-up, no performance.
+4. Say "use", not "utilize". Say "to", not "in order to".
+
 ## Thinking
 1. Stay on task.
 2. Solve only the asked problem.
