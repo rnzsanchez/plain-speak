@@ -56,6 +56,26 @@ stay out of your lifetime stats. The mode reaches each child as `PLAIN_SPEAK_MOD
 which outranks both the global flag and a project pin, so a run never writes your live
 setting and a run you kill cannot leave it wrong.
 
+## What counts as one session
+
+A session is one `(model, mode, round)`. Nothing is shared across those three.
+
+| Boundary | New session |
+|---|---|
+| Tool — `claude -p` vs `codex exec` | Yes, separate processes throughout |
+| Model | Yes |
+| Mode — `off`, `normal`, `cte` | Yes |
+| Round — each `--repeat` | Yes |
+| Turn, inside one cell | **No** — the prompts share the session |
+
+Turn 1 opens the session, turns 2 and 3 resume it (`--resume`, `exec resume`). That is
+the whole point: the rules go in once at session start and are cache-read after, which
+is how they behave in real use. Three one-shot sessions would each pay the cache-creation
+cost instead, and that buries the output difference — the mistake that made the v1 cost
+numbers meaningless.
+
+So `--repeat 5` across nine models and three modes is 135 sessions and 405 calls.
+
 ## What the baseline includes
 
 Every cell is a brand-new session — no cell or repeat resumes another — and every child
