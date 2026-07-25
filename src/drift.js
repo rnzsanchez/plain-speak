@@ -10,7 +10,7 @@
 // enough points mean drift.
 //   normal — the base voice. Full thoughts welcome, so this is tone-led and one
 //            stray word never trips it.
-//   cte    — caveman, dialled to twelve. Any single hit is drift.
+//   cte    — blunt, dialled to twelve. Any single hit is drift.
 const THRESHOLDS = {
   normal: { points: 3, sentenceWords: 30, walls: 3 },
   cte: { points: 1, sentenceWords: 8, walls: 1 },

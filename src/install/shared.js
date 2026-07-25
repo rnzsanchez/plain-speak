@@ -22,7 +22,7 @@ function copyRuntime() {
     fs.rmSync(path.join(dir, sub), { recursive: true, force: true });
     fs.cpSync(path.join(PKG_ROOT, sub), path.join(dir, sub), { recursive: true });
   }
-  fs.chmodSync(path.join(dir, 'src', 'statusline.sh'), 0o755);
+  fs.chmodSync(path.join(dir, 'src', 'plain-speak-statusline.sh'), 0o755);
   return dir;
 }
 
