@@ -99,11 +99,8 @@ load at the next session start.
 Installed with `npx` instead of as a plugin there is no namespace to lean on, so they
 arrive as `/plain-speak` and `/plain-speak-stats`.
 
-The badge shows what's live, next to your other plugin badges:
-
-```
-Opus 5 (1M) | plain-speak · main · [PONYTAIL] · [PLAIN-SPEAK 🧠 CTE]
-```
+A badge showing the active mode is available for your statusline, if you use one that
+renders plugin badges. Switching to `off` hides it.
 
 ---
 
