@@ -106,8 +106,13 @@ tokens dominate and hide the output difference — that mistake is why the v1 co
 numbers in `RESULTS.md` were noise. Don't present cost from a single-turn harness.
 
 `plain-speak stats` shows a figure only when `src/savings.json` has an entry for that
-model. No data, no number — and it reports the benchmark percentage with its provenance
-rather than multiplying it across the session's token count, which would be fiction.
+model. No data, no number. The saving it prints is the benchmark cut applied to the
+**prose slice only** — output tokens apportioned to `text` blocks — never to the whole
+session. In a real coding session the prose is ~10-15% of output and tool calls are the
+rest, so scaling the percentage across the total would overstate it several times over.
+The line says "roughly" and names where the percentage came from, because the split is
+apportioned by character size (usage is per message, not per block) and the benchmark
+measured a different kind of turn.
 
 The results are strongly model-dependent and the docs must keep saying so: 45–59% on
 Opus 5 and Sonnet 5, ~10% or less on Haiku 4.5, and nothing reliable on GPT — `normal`

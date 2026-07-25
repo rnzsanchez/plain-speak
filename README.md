@@ -179,24 +179,26 @@ An example report — the shape of the output, with made-up counters:
 ```
 plain-speak — cte
 
+  Saved roughly 11,300 tokens. Cost 1,400 to do it.
+  Rough: 45% comes from a benchmark on claude-opus-5, not from this session.
+
 This session
-  holding      ████████░░  83%   5 of 6 turns clean
-  reinjections 2
-  output       4,180 tokens over 12 messages · 348 each
-  measured     ████░░░░░░  45% shorter replies on claude-opus-5 in a 3-turn benchmark
-  last drift   filler: "certainly"; corporate word: "leverage"
+  stayed short   █████████░  9 of 11 replies
+  had to remind  2 times
+  I talked       13,800 tokens
+  I worked       104,700 tokens of tool calls and code — untouched by the rules
+  last slip      filler: "certainly"; corporate word: "leverage"
 
 Lifetime
-  holding      █████████░  91%   203 turns across 14 sessions
-  reinjections 12 total (~2,196 tokens)
+  stayed short   █████████░  185 of 203 replies, across 14 sessions
+  reminders      12, about 2,200 tokens all in
 ```
 
-Counts come from the transcript, so they are real.
-
-The `measured` line is the benchmark result for your model, and it stays a percentage on
-purpose. Multiplying it into "you saved N tokens" would invent a number: the benchmark
-measures short question-and-answer turns, a real session is mostly tool traffic. No
-benchmark for your model, no line.
+Token counts come from the transcript, so they are real. The saving is not: it is your
+model's benchmark cut applied to the **talking only**. Tool calls, code and commits are
+written normally in every mode, so they are excluded — in this example they are 88% of
+the output. Multiplying the percentage across all of it would overstate the saving about
+eightfold. No benchmark for your model, no figure at all.
 
 ---
 
