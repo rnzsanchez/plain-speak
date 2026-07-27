@@ -46,6 +46,10 @@ const turns = Number(flag('turns', 3));
 // One run per cell is noisy: model output length varies between identical calls.
 // --repeat runs each cell several times and reports the median.
 const repeat = Math.max(1, Number(flag('repeat', 1)));
+// Codex bills reasoning as output, but no response rule governs how long a model thinks.
+// Inheriting the operator's effort setting therefore measures reasoning as much as reply
+// length, so --reasoning pins it per run and the level is recorded with the result.
+const reasoning = flag('reasoning', null);
 const promptFile = flag('prompts', path.join(import.meta.dirname, 'prompts.txt'));
 const outDir = flag('out', path.join(import.meta.dirname, 'results'));
 
@@ -129,9 +133,13 @@ function runCodex(prompt, model, threadId, env) {
   // passing it makes turn 1 succeed and every later turn of the same session die with
   // "unexpected argument '-s'". The prompts are questions and call no tools, so the
   // default policy is fine — and identical on every turn, which matters more.
+  // -c has to sit after the subcommand. Before it, codex stops recognising `exec` and
+  // falls back to reading the prompt from stdin, which hangs the same way the missing
+  // 'ignore' did. Unlike -s, both `exec` and `exec resume` accept it.
+  const cfg = reasoning ? ['-c', `model_reasoning_effort="${reasoning}"`] : [];
   const args = threadId
-    ? ['exec', 'resume', threadId, '--json', '--skip-git-repo-check', '-m', model, prompt]
-    : ['exec', '--json', '--skip-git-repo-check', '-m', model, prompt];
+    ? ['exec', 'resume', threadId, ...cfg, '--json', '--skip-git-repo-check', '-m', model, prompt]
+    : ['exec', ...cfg, '--json', '--skip-git-repo-check', '-m', model, prompt];
 
   // stdio stdin MUST be 'ignore'. With a pipe, `codex exec` treats stdin as extra
   // prompt input and blocks waiting for EOF — it prints "Reading additional input
@@ -142,6 +150,7 @@ function runCodex(prompt, model, threadId, env) {
     env,
     cwd: SCRATCH,
     stdio: ['ignore', 'pipe', 'pipe'],
+    timeout: 180_000,
   });
 
   // The --json stream is not the session-file format: usage arrives on a
@@ -201,6 +210,7 @@ function session(model, mode) {
   return {
     model,
     mode,
+    ...(reasoning && isCodex(model) ? { reasoningEffort: reasoning } : {}),
     turns: turnResults.length,
     outputTokens: sum('outputTokens'),
     outputPerTurn: Math.round(sum('outputTokens') / turnResults.length),
@@ -299,9 +309,16 @@ for (const { model, mode } of plan) {
       result.outputPerTurnRuns = runs.map((x) => x.outputPerTurn);
       result.outputPerTurn = median(result.outputPerTurnRuns);
       result.outputTokens = median(runs.map((x) => x.outputTokens));
+      result.visibleOutputTokens = median(runs.map((x) => x.visibleOutputTokens));
+      result.reasoningTokens = median(runs.map((x) => x.reasoningTokens));
     }
     if (!result.outputTokens) throw new Error('zero output tokens — refusing to save a bogus result');
-    const file = path.join(outDir, `${stamp}-${model}-${mode}.json`);
+    // The effort goes in the name too. A `none` run and a `medium` run of the same cell
+    // are different experiments, and a listing that hides that invites comparing them.
+    const file = path.join(
+      outDir,
+      `${stamp}-${model}-${mode}${result.reasoningEffort ? `-effort-${result.reasoningEffort}` : ''}.json`
+    );
     fs.writeFileSync(file, `${JSON.stringify(result, null, 2)}\n`);
     console.log(`  → ${result.outputTokens} output tokens total, saved ${path.basename(file)}`);
   } catch (err) {
