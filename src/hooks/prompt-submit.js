@@ -47,12 +47,20 @@ run(({ sessionId, prompt, cwd }) => {
   state.bumpLifetime(store, { injections: 1 });
   state.saveSession(sessionId, next, store);
 
-  // Once eased off, send a one-line nudge rather than the whole ruleset. If the model
-  // keeps drifting the context is probably already large, and more context is not the
-  // fix — a reminder costs ~30 tokens instead of ~200.
-  const body = state.easedOff(session)
-    ? `PLAIN-SPEAK reminder (${mode}): answer first, plain words, no filler, no wall of prose.`
-    : rulesFor(mode);
+  // Three strengths, picked by what the last few turns actually did.
+  //
+  // Eased off — the nudges are landing and the drift is occasional. Send one line
+  // rather than the whole ruleset: ~30 tokens instead of ~200, and if the model keeps
+  // drifting the context is probably already large.
+  //
+  // Escalating — drift on consecutive turns. The quiet nudge is not working, so
+  // repeating it more softly is the wrong move. Say so plainly, then restate the rules.
+  const streak = session.streak || 0;
+  const body = state.escalating(session)
+    ? `You have now drifted ${streak} turns running. The rules below are not a suggestion — follow them in this reply, starting with the first sentence.\n\n${rulesFor(mode)}`
+    : state.easedOff(session)
+      ? `PLAIN-SPEAK reminder (${mode}): answer first, plain words, no filler, no wall of prose.`
+      : rulesFor(mode);
 
   inject(
     'UserPromptSubmit',

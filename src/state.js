@@ -19,8 +19,17 @@ const ALIASES = { max: 'cte', on: 'normal' };
 const BACKOFF_AFTER = Number(process.env.PLAIN_SPEAK_BACKOFF_AFTER || 3);
 const COOLDOWN_TURNS = 1;
 const EASED_COOLDOWN_TURNS = 4;
-// Past the threshold plain-speak stops being aggressive: longer gap, shorter nudge.
-const easedOff = (session) => session.injections >= BACKOFF_AFTER;
+// Backing off is right when the nudges are landing and the drift is occasional. It is
+// exactly wrong when the model keeps drifting turn after turn: that is evidence the
+// message is too weak, and answering it with a longer gap and a shorter message makes
+// it worse. `streak` counts consecutive drifted turns, so the two cases are told apart
+// rather than both being read as "stop nagging".
+const ESCALATE_AFTER = Number(process.env.PLAIN_SPEAK_ESCALATE_AFTER || 2);
+const streakOf = (session) => session.streak || 0;
+const escalating = (session) => streakOf(session) >= ESCALATE_AFTER;
+// Past the threshold plain-speak stops being aggressive: longer gap, shorter nudge —
+// unless it is escalating, in which case it goes back to correcting every turn.
+const easedOff = (session) => session.injections >= BACKOFF_AFTER && !escalating(session);
 const cooldownFor = (session) => (easedOff(session) ? EASED_COOLDOWN_TURNS : COOLDOWN_TURNS);
 const KEEP_SESSIONS = 50;
 
@@ -113,6 +122,7 @@ const BLANK_SESSION = {
   drift: false,
   reason: null,
   trips: 0,
+  streak: 0,
   injections: 0,
   lastInjectTurn: -1,
   mode: null,
@@ -198,15 +208,19 @@ function recordTurn(session, verdict) {
     next.drift = true;
     next.reason = verdict.reason;
     next.trips = session.trips + 1;
+    next.streak = streakOf(session) + 1;
   } else {
     next.drift = false;
     next.reason = null;
+    // One clean turn is the only evidence that the correction landed.
+    next.streak = 0;
   }
   return next;
 }
 
 module.exports = {
   easedOff,
+  escalating,
   cooldownFor,
   claudeDir,
   codexDir,

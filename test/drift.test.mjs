@@ -132,3 +132,29 @@ test('an explicit ceiling is still honoured when asked for', () => {
   assert.equal(shouldReinject(s, 3), false, 'ceiling reached');
   assert.equal(shouldReinject(s, 5), true, 'below the ceiling, and past the wider cooldown');
 });
+
+test('consecutive drift escalates instead of easing off', () => {
+  const { escalating } = require('../src/state.js');
+  // Eased off, and the nudges are landing: one isolated trip, no streak.
+  const easing = { trips: 9, injections: 5, lastInjectTurn: 6, streak: 1, drift: true };
+  assert.equal(easedOff(easing), true, 'one trip is not a pattern');
+  assert.equal(escalating(easing), false);
+  assert.equal(cooldownFor(easing), 4);
+
+  // Drift on consecutive turns means the quiet nudge is not working.
+  const stuck = { ...easing, streak: 2 };
+  assert.equal(escalating(stuck), true);
+  assert.equal(easedOff(stuck), false, 'a streak overrides the backoff');
+  assert.equal(cooldownFor(stuck), 1, 'back to correcting every turn');
+  assert.equal(shouldReinject({ ...stuck, turns: 8 }), true);
+});
+
+test('the streak counts consecutive drift and one clean turn clears it', () => {
+  let s = { turns: 0, trips: 0, injections: 0, lastInjectTurn: -1, streak: 0 };
+  s = recordTurn(s, { drift: true, reason: 'x' });
+  s = recordTurn(s, { drift: true, reason: 'x' });
+  assert.equal(s.streak, 2, 'two drifted turns running');
+
+  s = recordTurn(s, { drift: false });
+  assert.equal(s.streak, 0, 'a clean turn is the evidence the correction landed');
+});

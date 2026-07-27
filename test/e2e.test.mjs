@@ -231,18 +231,39 @@ test('e2e: a whole session — inject once, stay silent, correct on drift, then 
     'cooldown must hold'
   );
 
-  // Keep drifting: it corrects again, and past the threshold sends a nudge, not the
-  // whole ruleset.
-  let easedBody = null;
+  // Keep drifting turn after turn. Backing off here would be the wrong answer — the
+  // quiet nudge is demonstrably not working — so it escalates instead.
+  let escalated = null;
   for (let i = 0; i < 12; i += 1) {
     hook(env, 'stop.js', { session_id: 'e2e', last_assistant_message: FUSSY });
     const out = hook(env, 'prompt-submit.js', { session_id: 'e2e', user_prompt: `more ${i}` });
     if (!out) continue;
     const body = JSON.parse(out).hookSpecificOutput.additionalContext;
+    if (/turns running/.test(body)) escalated = body;
+  }
+  assert.ok(escalated, 'it must still correct after many drifts — there is no cap');
+  assert.match(escalated, /not a suggestion/, 'consecutive drift gets a firmer correction');
+  assert.match(escalated, /Response Rules/, 'and the whole ruleset, not the short nudge');
+});
+
+test('e2e: occasional drift past the threshold still eases off to a short nudge', () => {
+  const { env } = sandbox();
+  run(env, 'mode', 'cte');
+  hook(env, 'session-start.js', { session_id: 'eased' });
+
+  // A clean turn between each drift keeps the streak at 1, so this is the "the nudges
+  // are landing, stop nagging" case rather than the stuck one.
+  let easedBody = null;
+  for (let i = 0; i < 24; i += 1) {
+    const message = i % 2 === 0 ? FUSSY : 'Done.';
+    hook(env, 'stop.js', { session_id: 'eased', last_assistant_message: message });
+    const out = hook(env, 'prompt-submit.js', { session_id: 'eased', user_prompt: `q ${i}` });
+    if (!out) continue;
+    const body = JSON.parse(out).hookSpecificOutput.additionalContext;
     if (/reminder/.test(body)) easedBody = body;
   }
-  assert.ok(easedBody, 'it must still correct after many drifts — there is no cap');
-  assert.doesNotMatch(easedBody, /Response Rules/, 'eased-off corrections send the short nudge');
+  assert.ok(easedBody, 'intermittent drift eventually eases off');
+  assert.doesNotMatch(easedBody, /Talk|Shape/, 'eased-off corrections send the short nudge');
 });
 
 test('e2e: exemptions and quoting keep it quiet', () => {
