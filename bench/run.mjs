@@ -207,6 +207,10 @@ function session(model, mode) {
     process.stdout.write(`    ${String(t.outputTokens).padStart(6)} out  ${prompt.slice(0, 48)}\n`);
   }
   const sum = (k) => turnResults.reduce((a, t) => a + (t[k] || 0), 0);
+  // Presence, not truthiness. `|| null` turned a real zero into "not reported", and the
+  // --repeat median then sorted those nulls to the front and threw away the runs that
+  // did report. Claude reports neither field; Codex reports both, sometimes as zero.
+  const reported = (k) => turnResults.some((t) => t[k] != null);
   return {
     model,
     mode,
@@ -214,8 +218,8 @@ function session(model, mode) {
     turns: turnResults.length,
     outputTokens: sum('outputTokens'),
     outputPerTurn: Math.round(sum('outputTokens') / turnResults.length),
-    visibleOutputTokens: sum('visibleOutputTokens') || null,
-    reasoningTokens: sum('reasoningTokens') || null,
+    visibleOutputTokens: reported('visibleOutputTokens') ? sum('visibleOutputTokens') : null,
+    reasoningTokens: reported('reasoningTokens') ? sum('reasoningTokens') : null,
     inputTokens: sum('inputTokens'),
     cacheRead: sum('cacheRead'),
     cacheCreate: sum('cacheCreate'),
@@ -295,6 +299,10 @@ const median = (xs) => {
   return sorted.length % 2 ? sorted[mid] : Math.round((sorted[mid - 1] + sorted[mid]) / 2);
 };
 
+// A field the model never reports stays null; one it reports as zero stays a number.
+// Feeding nulls to median() would sort them as zeros and drag the figure down.
+const medianReported = (xs) => (xs.every((x) => x == null) ? null : median(xs.map((x) => x || 0)));
+
 for (const { model, mode } of plan) {
   console.log(`\n${model} · ${mode}`);
   try {
@@ -309,8 +317,8 @@ for (const { model, mode } of plan) {
       result.outputPerTurnRuns = runs.map((x) => x.outputPerTurn);
       result.outputPerTurn = median(result.outputPerTurnRuns);
       result.outputTokens = median(runs.map((x) => x.outputTokens));
-      result.visibleOutputTokens = median(runs.map((x) => x.visibleOutputTokens));
-      result.reasoningTokens = median(runs.map((x) => x.reasoningTokens));
+      result.visibleOutputTokens = medianReported(runs.map((x) => x.visibleOutputTokens));
+      result.reasoningTokens = medianReported(runs.map((x) => x.reasoningTokens));
     }
     if (!result.outputTokens) throw new Error('zero output tokens — refusing to save a bogus result');
     // The effort goes in the name too. A `none` run and a `medium` run of the same cell
