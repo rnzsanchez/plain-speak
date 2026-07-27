@@ -1,5 +1,28 @@
 # Results
 
+## Codex refresh — six models, medium reasoning, five rounds
+
+`node bench/run.mjs --models gpt-5.6-sol,gpt-5.6-terra,gpt-5.6-luna,gpt-5.5,gpt-5.4,gpt-5.4-mini --repeat 5 --reasoning medium`,
+2026-07-27. Every cell is the median of 5 fresh three-turn Codex CLI sessions.
+
+| Model | off | `normal` | cut | `cte` | cut | visible-only `cte` cut |
+|---|---:|---:|---:|---:|---:|---:|
+| gpt-5.6-sol | 386 | 237 | **39%** | 514 | −33% | 8% |
+| gpt-5.6-terra | 281 | 204 | **27%** | 269 | 4% | 4% |
+| gpt-5.6-luna | 390 | 285 | 27% | 257 | **34%** | 39% |
+| gpt-5.5 | 336 | 209 | 38% | 149 | **56%** | 56% |
+| gpt-5.4 | 443 | 391 | 12% | 369 | **17%** | 20% |
+| gpt-5.4-mini | 676 | 646 | 4% | 532 | **21%** | 23% |
+
+These runs reverse the old GPT result: at fixed medium reasoning, `normal` shortened all
+six models, though mini's 4% is still noise. `cte` helped five models but made
+gpt-5.6-sol's billed output 33% longer because reasoning tokens spiked; its visible reply
+was still 8% shorter.
+
+One Codex call hung and its whole cell was discarded and restarted. The gpt-5.4 and
+gpt-5.4-mini off cells finished in later runner invocations than their on cells, with the
+same model, effort, prompts, turns and repeat count; `bench/report.mjs` flags that split.
+
 ## v3 — nine models, three modes, five rounds each
 
 `node bench/run.mjs --repeat 5`, 2026-07-26. Every cell is the **median of 5 rounds**.
