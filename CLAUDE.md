@@ -169,3 +169,30 @@ Skip it only for trivial mechanical edits.
 
 Single-line messages, `type: subject` (`feat:`, `fix:`, `docs:`). No body, no
 `Co-Authored-By` trailer.
+
+## Releasing
+
+**Pushing is not releasing.** Both tools resolve the plugin by the version in its
+manifest, so without a bump `claude plugin update` and `codex plugin update` both report
+"already at the latest version" and do nothing. The change is on GitHub and live on
+nobody's machine, which looks exactly like a failed push.
+
+Three files move together, in the same commit as the change or right after it:
+
+| File | Read by |
+|---|---|
+| `package.json` | npm metadata, and `plain-speak --version` |
+| `.claude-plugin/plugin.json` | Claude Code |
+| `.codex-plugin/plugin.json` | Codex |
+
+The two manifests live in hidden directories, so a plain `rg` for the old version misses
+them — pass `--hidden` or name the files.
+
+Then update both tools, not just the one in front of you:
+
+```sh
+claude plugin marketplace update plain-speak && claude plugin update plain-speak@plain-speak
+codex plugin marketplace update plain-speak && codex plugin update plain-speak@plain-speak
+```
+
+Codex re-prompts for hook trust after an update, because the manifest hashes changed.
