@@ -139,7 +139,7 @@ function readStore() {
   }
 }
 
-// ponytail: read-modify-write, no lock. Hooks for one session run sequentially,
+// Known ceiling: read-modify-write, no lock. Hooks for one session run sequentially,
 // so the only racer is a second Claude Code window; worst case is one lost
 // counter increment. Add a lockfile if that ever matters.
 function writeStore(store) {
