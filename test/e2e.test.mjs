@@ -152,6 +152,33 @@ test('e2e: tidy is idempotent — a clean machine is silent and the badge never 
   assert.equal((command.match(/plain-speak-statusline\.sh/g) || []).length, 1, 'the badge must not stack');
 });
 
+test('e2e: a statusline that already renders plugin badges is left alone', () => {
+  const { env, claudeDir } = sandbox();
+  // A statusline that runs every installed plugin's *-statusline.sh already draws our
+  // badge. Adding ours in front of it would draw it twice.
+  const theirs = path.join(claudeDir, 'their-statusline.sh');
+  fs.writeFileSync(theirs, "#!/bin/bash\nfind \"$p\" -name '*-statusline.sh'\n");
+  fs.writeFileSync(
+    path.join(claudeDir, 'settings.json'),
+    JSON.stringify({ statusLine: { type: 'command', command: `bash ${theirs}` } })
+  );
+
+  const out = run(env, 'status');
+  assert.doesNotMatch(out, /badge/, 'it must not announce a badge it did not add');
+
+  const after = readJson(path.join(claudeDir, 'settings.json'));
+  assert.equal(after.statusLine.command, `bash ${theirs}`, 'their statusline must be untouched');
+});
+
+test('e2e: a plain statusline keeps working behind the badge', () => {
+  const { env, claudeDir } = sandbox({
+    settings: { statusLine: { type: 'command', command: 'bash ~/mine.sh' } },
+  });
+  run(env, 'status');
+  const command = readJson(path.join(claudeDir, 'settings.json')).statusLine.command;
+  assert.match(command, /plain-speak-statusline\.sh"; bash ~\/mine\.sh/);
+});
+
 test('e2e: under Codex, tidy clears its own wiring and switches hooks on', () => {
   const { env, claudeDir, codexHome } = sandbox();
   legacyCodex(codexHome);
