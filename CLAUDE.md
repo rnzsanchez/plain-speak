@@ -27,12 +27,12 @@ node bench/report.mjs --write     # results table, and feed src/savings.json
 | File | Role |
 |---|---|
 | `src/drift.js` | The check. Pure functions, no I/O. Score-based: each tone hit is a point, the mode's threshold decides when points mean drift. |
-| `src/state.js` | Mode flag + counters. Everything under `~/.claude/plain-speak/`. |
+| `src/state.js` | Mode flag + counters. Claude Code uses `~/.claude/plain-speak/`; Codex uses `~/.codex/plain-speak/`. |
 | `src/hooks/*.js` | `SessionStart` injects once, `UserPromptSubmit` usually injects nothing, `Stop` scores and records. |
 | `src/install/*.js` | Settings patching for each tool; `shared.js` holds what both need. |
 | `modes/*.md` | The rule text. `normal` is the base voice, `cte` is the same voice at twelve. |
-| `.claude-plugin/`, `hooks/` | Plugin + marketplace manifests. A plugin install needs no `settings.json` edits and no runtime copy, because `${CLAUDE_PLUGIN_ROOT}` is already stable. |
-| `skills/` | Two commands, named short (`init`, `stats`) because a plugin install namespaces them as `/plain-speak:init`. `copySkills()` prefixes them for npx installs, where there is no namespace, and rewrites the frontmatter `name` to match the directory — the two must agree. |
+| `.claude-plugin/`, `.codex-plugin/`, `.agents/plugins/`, `hooks/` | Tool-specific plugin and marketplace manifests plus shared hooks. Claude Code uses `${CLAUDE_PLUGIN_ROOT}`; Codex resolves its own plugin runtime. Neither route edits settings. |
+| `skills/` | Two skills. Claude Code namespaces plugin skills as `/plain-speak:init` and `/plain-speak:stats`. Codex invokes them with `$` or natural language; never document them as custom slash commands. `copySkills()` renames copied npx skills and their frontmatter together. |
 | `docs/` | Install, checker, benchmark, tradeoffs. The README links out rather than growing. |
 
 Claude Code and Codex fire the same three events with near-identical payloads, so
@@ -67,9 +67,13 @@ on Codex.
 - **Never resolve a path with `ls A B | head -1`.** `ls` sorts its output, so it
   ignores the order you passed. That made the skills run a stale standalone runtime
   instead of the installed plugin. Test candidates in order with `[ -f ... ]`.
-- **A leftover runtime at `~/.claude/plain-speak` can be older than the plugin.**
-  `uninstall --claude` keeps it on purpose because Codex hooks point at it, so
-  re-run `install --codex` after changing hook code or Codex keeps running old hooks.
+- **Claude Code and Codex state must stay isolated.** Claude uses
+  `~/.claude/plain-speak/`; Codex uses `~/.codex/plain-speak/`. A mode switch, stats
+  update or uninstall in one tool must not affect the other. Project pins are separate
+  too: `.plain-speak-mode` for Claude and `.plain-speak-codex-mode` for Codex.
+- **Codex has no custom plugin slash commands.** Document `$plain-speak:init`,
+  `$plain-speak:stats` and exact mode prompt `plain speak off|normal|cte`. Keep
+  Claude Code's existing slash commands unchanged.
 - **Skill directory name and frontmatter `name` must match.** `copySkills()` renames
   both together. Change one without the other and the command silently fails to load.
 - **The badge script must keep its `*-statusline.sh` name.** Statuslines that render

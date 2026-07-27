@@ -125,12 +125,21 @@ in your transcript.
 
 ## Install
 
+Claude Code:
+
 ```
 /plugin marketplace add rnzsanchez/plain-speak
 /plugin install plain-speak@plain-speak
 ```
 
-Or, to cover Codex as well as Claude Code:
+Codex:
+
+```sh
+codex plugin marketplace add rnzsanchez/plain-speak
+codex plugin add plain-speak@plain-speak
+```
+
+Or use the npx installer:
 
 ```sh
 npx github:rnzsanchez/plain-speak install
@@ -144,19 +153,21 @@ npx github:rnzsanchez/plain-speak install
 
 Everything runs inside a session. Installing is the only thing you do in a shell.
 
-| Command | What it does |
-|---|---|
-| `/plain-speak:init` | Say which mode is active. Runs nothing — the answer is already in context |
-| `/plain-speak:init cte` | Switch mode — `off`, `normal`, `cte`. Re-arms the rules, answers in the new voice |
-| `/plain-speak:stats` | Token and drift report: this session, and lifetime |
+| | Claude Code | Codex |
+|---|---|---|
+| Show mode | `/plain-speak:init` | `$plain-speak:init` or `which plain speak mode is active?` |
+| Switch mode | `/plain-speak:init cte` | `plain speak cte` |
+| Stats | `/plain-speak:stats` | `$plain-speak:stats` |
 
-Plugin commands carry the plugin's namespace, hence the `:`. The npx route has no
-namespace, so there they are `/plain-speak`, `/plain-speak cte` and `/plain-speak-stats`.
-Installing over a plugin skips them, so no command shows up twice.
+Codex mode prompt: `plain speak off|normal|cte`. Replace the final part with one mode.
+Codex skills use `$` or natural language; Codex does not provide custom slash commands.
+Claude Code keeps its plugin slash commands. With the Claude npx route, they are
+`/plain-speak`, `/plain-speak cte` and `/plain-speak-stats`.
 
-The model cannot trigger either one. Only you can. They load at the next session start.
+Claude Code commands cannot be triggered by the model. Hooks load at the next session
+start.
 
-There is a badge for your statusline too, if yours renders plugin badges. `off` hides it.
+Claude Code also has a statusline badge. `off` hides it.
 
 ---
 
@@ -276,8 +287,9 @@ What it costs:
 | `UserPromptSubmit` | Injects **nothing**, unless drift was flagged or you switched mode |
 | `Stop` | Scores the reply, records the verdict, prints nothing, never blocks |
 
-Codex fires the same three events with the same payloads, so one set of scripts
-serves both tools. Zero dependencies — Node, plus one bash script for the badge.
+Codex fires the same three events with near-identical payloads, so one set of scripts
+serves both tools. Each tool keeps its own mode and stats. Zero dependencies — Node,
+plus one bash script for the badge.
 
 <div align="center">
 

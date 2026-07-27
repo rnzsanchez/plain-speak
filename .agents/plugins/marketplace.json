@@ -1,0 +1,21 @@
+{
+  "name": "plain-speak",
+  "interface": {
+    "displayName": "Plain Speak"
+  },
+  "plugins": [
+    {
+      "name": "plain-speak",
+      "source": {
+        "source": "url",
+        "url": "https://github.com/rnzsanchez/plain-speak",
+        "ref": "main"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}

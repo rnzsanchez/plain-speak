@@ -1,5 +1,7 @@
 'use strict';
-// State lives in ~/.claude/plain-speak/:
+// State lives in the active tool's config folder:
+//   Claude Code — ~/.claude/plain-speak/
+//   Codex       — ${CODEX_HOME:-~/.codex}/plain-speak/
 //   mode        — one bare word, read by the bash statusline
 //   state.json  — lifetime totals + recent per-session counters
 
@@ -26,11 +28,17 @@ function claudeDir() {
   return process.env.CLAUDE_CONFIG_DIR || path.join(os.homedir(), '.claude');
 }
 
+function codexDir() {
+  return process.env.CODEX_HOME || path.join(os.homedir(), '.codex');
+}
+
 // Everything lives in one folder so plain-speak leaves a single entry in
-// ~/.claude. The mode file is one bare word so the bash statusline needs no jq.
-const homeDir = () => path.join(claudeDir(), 'plain-speak');
-const modePath = () => path.join(homeDir(), 'mode');
-const storePath = () => path.join(homeDir(), 'state.json');
+// each tool's config. PLUGIN_ROOT is Codex-only; npx hooks select Codex explicitly.
+const isCodex = () => process.env.PLAIN_SPEAK_TARGET === 'codex' || Boolean(process.env.PLUGIN_ROOT);
+const homeDir = (target) =>
+  path.join(target === 'codex' || (!target && isCodex()) ? codexDir() : claudeDir(), 'plain-speak');
+const modePath = (target) => path.join(homeDir(target), 'mode');
+const storePath = (target) => path.join(homeDir(target), 'state.json');
 
 function sanitizeId(id) {
   return String(id || 'unknown').replace(/[^A-Za-z0-9._-]/g, '') || 'unknown';
@@ -61,39 +69,42 @@ function readSafe(file) {
   }
 }
 
-const PROJECT_FILE = '.plain-speak-mode';
+const projectFile = (target) =>
+  target === 'codex' || (!target && isCodex()) ? '.plain-speak-codex-mode' : '.plain-speak-mode';
 
 // Precedence: an env var beats a project pin, which beats the global setting. So one
 // repo can sit in cte while everything else stays on normal, and a single shell can
 // override both without touching either file.
-function readMode(cwd = process.cwd()) {
+function readMode(cwd = process.cwd(), target) {
   return (
     normalizeMode(process.env.PLAIN_SPEAK_MODE) ||
-    (cwd ? normalizeMode(readSafe(path.join(cwd, PROJECT_FILE))) : null) ||
-    normalizeMode(readSafe(modePath())) ||
+    (cwd ? normalizeMode(readSafe(path.join(cwd, projectFile(target)))) : null) ||
+    normalizeMode(readSafe(modePath(target))) ||
     'normal'
   );
 }
 
 // Which of those three is actually in force — `status` reports it so a project pin is
 // never a mystery.
-function modeSource(cwd = process.cwd()) {
+function modeSource(cwd = process.cwd(), target) {
   if (normalizeMode(process.env.PLAIN_SPEAK_MODE)) return 'PLAIN_SPEAK_MODE';
-  if (cwd && normalizeMode(readSafe(path.join(cwd, PROJECT_FILE)))) return `${PROJECT_FILE} in this project`;
+  if (cwd && normalizeMode(readSafe(path.join(cwd, projectFile(target))))) {
+    return `${projectFile(target)} in this project`;
+  }
   return 'global';
 }
 
-function writeProjectMode(raw, cwd = process.cwd()) {
+function writeProjectMode(raw, cwd = process.cwd(), target) {
   const mode = normalizeMode(raw);
   if (!mode) throw new Error(`unknown mode "${raw}" — use ${MODES.join(', ')}`);
-  writeSafe(path.join(cwd, PROJECT_FILE), mode);
+  writeSafe(path.join(cwd, projectFile(target)), mode);
   return mode;
 }
 
-function writeMode(raw) {
+function writeMode(raw, target) {
   const mode = normalizeMode(raw);
   if (!mode) throw new Error(`unknown mode "${raw}" — use ${MODES.join(', ')}`);
-  writeSafe(modePath(), mode);
+  writeSafe(modePath(target), mode);
   return mode;
 }
 
@@ -198,6 +209,7 @@ module.exports = {
   easedOff,
   cooldownFor,
   claudeDir,
+  codexDir,
   homeDir,
   modePath,
   readMode,

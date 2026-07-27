@@ -7,6 +7,9 @@ const { run, rulesFor, inject } = require('./lib');
 const state = require('../state');
 
 run(({ sessionId, cwd }) => {
+  // Codex plugin skills run outside hook env, so keep a stable runtime they can call.
+  if (process.env.PLUGIN_ROOT) require('../install/shared').copyRuntime('codex');
+
   const mode = state.readMode(cwd);
   if (mode === 'off') return;
 

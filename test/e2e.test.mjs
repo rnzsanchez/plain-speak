@@ -21,7 +21,14 @@ function sandbox({ settings, codex = true } = {}) {
   }
   // The harness exports CLAUDE_CODE_SESSION_ID for the real session; leaving it in a
   // sandbox env would point `stats` at a session the sandbox has never heard of.
-  const { CLAUDE_CODE_SESSION_ID, PLAIN_SPEAK_MODE, PLAIN_SPEAK_BENCH, ...clean } = process.env;
+  const {
+    CLAUDE_CODE_SESSION_ID,
+    PLAIN_SPEAK_MODE,
+    PLAIN_SPEAK_BENCH,
+    PLAIN_SPEAK_TARGET,
+    PLUGIN_ROOT,
+    ...clean
+  } = process.env;
   return {
     env: { ...clean, CLAUDE_CONFIG_DIR: claudeDir, CODEX_HOME: codexHome },
     claudeDir,
@@ -58,6 +65,8 @@ test('e2e: install wires both tools and leaves everything else alone', () => {
 
   assert.match(out, /hooks \+ badge wired/);
   assert.match(out, /nothing else in your settings was changed/);
+  assert.match(out, /Codex mode: normal\. Change it in a session: plain speak cte/);
+  assert.doesNotMatch(out, /Codex mode:.*\/plain-speak/);
 
   const after = readJson(path.join(claudeDir, 'settings.json'));
 
@@ -85,9 +94,17 @@ test('e2e: install wires both tools and leaves everything else alone', () => {
   assert.ok(fs.existsSync(path.join(claudeDir, 'skills', 'plain-speak', 'SKILL.md')));
   assert.ok(fs.existsSync(path.join(claudeDir, 'skills', 'plain-speak-stats', 'SKILL.md')));
   assert.ok(fs.existsSync(path.join(claudeDir, 'plain-speak', 'bin', 'cli.js')));
+  assert.ok(fs.existsSync(path.join(codexHome, 'plain-speak', 'bin', 'cli.js')));
   const codexHooks = readJson(path.join(codexHome, 'hooks.json'));
   assert.equal(Object.keys(codexHooks.hooks).length, 3);
+  for (const groups of Object.values(codexHooks.hooks)) {
+    assert.ok(
+      groups.flatMap((g) => g.hooks).every((h) => h.command.startsWith('PLAIN_SPEAK_TARGET=codex ')),
+      'Codex hooks must select Codex state'
+    );
+  }
   assert.match(fs.readFileSync(path.join(codexHome, 'config.toml'), 'utf8'), /hooks = true/);
+  assert.match(out, /skills: \$plain-speak \$plain-speak-stats/);
 
   // A frontmatter name must match its directory or the command never loads.
   const skill = fs.readFileSync(path.join(claudeDir, 'skills', 'plain-speak', 'SKILL.md'), 'utf8');
@@ -114,6 +131,19 @@ test('e2e: with the plugin enabled, the installer leaves the commands to it', ()
   assert.ok(readJson(path.join(claudeDir, 'settings.json')).hooks.Stop.length > 0);
   assert.match(run(env, 'status'), /switch: \/plain-speak:init/);
   assert.match(run(env, 'doctor'), /ok {3}\/plain-speak:init/);
+});
+
+test('e2e: explicit Claude install ignores a Codex target environment', () => {
+  const { env, claudeDir, codexHome } = sandbox();
+  run({ ...env, PLAIN_SPEAK_TARGET: 'codex' }, 'install', '--claude');
+
+  assert.ok(fs.existsSync(path.join(claudeDir, 'plain-speak', 'bin', 'cli.js')));
+  assert.ok(!fs.existsSync(path.join(codexHome, 'plain-speak', 'bin', 'cli.js')));
+  assert.ok(
+    readJson(path.join(claudeDir, 'settings.json')).hooks.SessionStart[0].hooks[0].command.includes(
+      path.join(claudeDir, 'plain-speak')
+    )
+  );
 });
 
 test('e2e: a disabled plugin provides nothing, so the commands are installed', () => {
@@ -247,6 +277,44 @@ test('e2e: mode precedence — env beats project, project beats global', () => {
   assert.match(JSON.parse(out).hookSpecificOutput.additionalContext, /CTE Mode/);
 });
 
+test('e2e: Claude and Codex modes and project pins are isolated', () => {
+  const { env, claudeDir, codexHome } = sandbox();
+  const codexEnv = { ...env, PLAIN_SPEAK_TARGET: 'codex' };
+  const project = fs.mkdtempSync(path.join(os.tmpdir(), 'ps-proj-'));
+
+  run(env, 'mode', 'normal');
+  run(codexEnv, 'mode', 'cte');
+
+  assert.equal(fs.readFileSync(path.join(claudeDir, 'plain-speak', 'mode'), 'utf8'), 'normal');
+  assert.equal(fs.readFileSync(path.join(codexHome, 'plain-speak', 'mode'), 'utf8'), 'cte');
+  assert.match(run(env, 'mode'), /normal/);
+  assert.match(run(codexEnv, 'mode'), /cte/);
+  assert.match(run(codexEnv, 'status'), /switch: plain speak off \| normal \| cte/);
+  assert.doesNotMatch(run(codexEnv, 'status'), /\/plain-speak/);
+
+  execFileSync('node', [cli, 'status', 'off', '--project'], {
+    env,
+    cwd: project,
+    encoding: 'utf8',
+  });
+  execFileSync('node', [cli, 'status', 'normal', '--project'], {
+    env: codexEnv,
+    cwd: project,
+    encoding: 'utf8',
+  });
+
+  assert.equal(fs.readFileSync(path.join(project, '.plain-speak-mode'), 'utf8'), 'off');
+  assert.equal(fs.readFileSync(path.join(project, '.plain-speak-codex-mode'), 'utf8'), 'normal');
+  assert.match(
+    execFileSync('node', [cli, 'status'], { env, cwd: project, encoding: 'utf8' }),
+    /off \(from \.plain-speak-mode/
+  );
+  assert.match(
+    execFileSync('node', [cli, 'status'], { env: codexEnv, cwd: project, encoding: 'utf8' }),
+    /normal \(from \.plain-speak-codex-mode/
+  );
+});
+
 test('e2e: switching mode by typing, but only when the prompt is the command', () => {
   const { env } = sandbox();
   run(env, 'mode', 'normal');
@@ -357,7 +425,7 @@ test('e2e: uninstall puts the sandbox back, and --purge clears the data', () => 
     hooks: { PreToolUse: [{ matcher: 'Bash', hooks: [{ type: 'command', command: 'echo mine' }] }] },
     statusLine: { type: 'command', command: 'bash ~/mine.sh' },
   };
-  const { env, claudeDir } = sandbox({ settings: existing });
+  const { env, claudeDir, codexHome } = sandbox({ settings: existing });
 
   run(env, 'install', '--statusline');
   run(env, 'uninstall');
@@ -374,6 +442,19 @@ test('e2e: uninstall puts the sandbox back, and --purge clears the data', () => 
 
   run(env, 'uninstall', '--purge');
   assert.ok(!fs.existsSync(path.join(claudeDir, 'plain-speak')), '--purge removes the data');
+  assert.ok(!fs.existsSync(path.join(codexHome, 'plain-speak')), '--purge removes Codex data');
+});
+
+test('e2e: Codex uninstall cleans skills and runtime without hooks.json', () => {
+  const { env, codexHome } = sandbox();
+  run(env, 'install', '--codex');
+  fs.rmSync(path.join(codexHome, 'hooks.json'));
+
+  run(env, 'uninstall', '--codex');
+
+  assert.ok(!fs.existsSync(path.join(codexHome, 'skills', 'plain-speak')));
+  assert.ok(!fs.existsSync(path.join(codexHome, 'plain-speak', 'bin')));
+  assert.ok(fs.existsSync(path.join(codexHome, 'plain-speak', 'mode')));
 });
 
 test('e2e: install with no Codex present skips it instead of failing', () => {

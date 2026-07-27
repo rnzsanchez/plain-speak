@@ -10,11 +10,24 @@ allowed-tools: Bash
 
 Run nothing. The active mode is already in this session's context, injected at session
 start as a `PLAIN-SPEAK MODE:` line and again on every switch. Reply with one line: the
-mode, and `/plain-speak:init off | normal | cte` to change it.
+mode, and the right form to change it:
+
+- Codex: `plain speak off | normal | cte`
+- Claude Code plugin: `/plain-speak:init off | normal | cte`
+- Claude Code standalone: `/plain-speak off | normal | cte`
 
 ## A mode was passed
 
 Switching writes state and has to re-arm the rules, so run this once:
+
+### Codex
+
+```sh
+CLI="${CODEX_HOME:-$HOME/.codex}/plain-speak/bin/cli.js"
+PLAIN_SPEAK_TARGET=codex node "$CLI" status $ARGUMENTS
+```
+
+### Claude Code
 
 ```sh
 CLI="$CLAUDE_PLUGIN_ROOT/bin/cli.js"

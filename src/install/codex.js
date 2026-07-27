@@ -51,12 +51,12 @@ function install() {
     console.log('Codex: not installed (no ~/.codex) — skipped');
     return;
   }
-  const dir = copyRuntime();
+  const dir = copyRuntime('codex');
   const config = readJson(hooksPath(), {});
   config.hooks = config.hooks || {};
 
   for (const [event, script] of Object.entries(HOOK_EVENTS)) {
-    const command = `node "${path.join(dir, 'src', 'hooks', script)}"`;
+    const command = `PLAIN_SPEAK_TARGET=codex node "${path.join(dir, 'src', 'hooks', script)}"`;
     const kept = (config.hooks[event] || [])
       .map((g) => ({ ...g, hooks: (g.hooks || []).filter((h) => !isOurs(h.command)) }))
       .filter((g) => g.hooks.length > 0);
@@ -70,7 +70,7 @@ function install() {
   const skills = copySkills(skillsDir);
 
   console.log(`Codex: hooks wired at ${hooksPath()}`);
-  console.log(`  commands: ${skills.map((s) => `/${s}`).join(' ')}`);
+  console.log(`  skills: ${skills.map((s) => `$${s}`).join(' ')}`);
   if (flipped) console.log('  enabled [features] hooks = true in config.toml');
   // Codex asks the user to trust hook sources on first run. Prompting is the
   // point of that check, so the installer tells you rather than bypassing it.
@@ -79,16 +79,20 @@ function install() {
 
 function uninstall() {
   const config = readJson(hooksPath(), null);
-  if (!config || !config.hooks) return;
-  for (const event of Object.keys(HOOK_EVENTS)) {
-    config.hooks[event] = (config.hooks[event] || [])
-      .map((g) => ({ ...g, hooks: (g.hooks || []).filter((h) => !isOurs(h.command)) }))
-      .filter((g) => g.hooks.length > 0);
-    if (config.hooks[event].length === 0) delete config.hooks[event];
+  if (config && config.hooks) {
+    for (const event of Object.keys(HOOK_EVENTS)) {
+      config.hooks[event] = (config.hooks[event] || [])
+        .map((g) => ({ ...g, hooks: (g.hooks || []).filter((h) => !isOurs(h.command)) }))
+        .filter((g) => g.hooks.length > 0);
+      if (config.hooks[event].length === 0) delete config.hooks[event];
+    }
+    writeJson(hooksPath(), config);
   }
-  writeJson(hooksPath(), config);
   removeSkills(path.join(codexHome(), 'skills'));
-  console.log('Codex: hooks and commands removed ([features] hooks left enabled)');
+  for (const sub of ['src', 'bin', 'modes']) {
+    fs.rmSync(path.join(codexRuntimeDir(), sub), { recursive: true, force: true });
+  }
+  console.log('Codex: hooks and skills removed ([features] hooks left enabled)');
 }
 
 function doctor() {
@@ -107,8 +111,6 @@ function doctor() {
   console.log(`  ${featureEnabled(toml) ? 'ok  ' : 'MISS'} [features] hooks`);
 }
 
-// Codex has no plugin namespace, so its commands are always the bare form.
-const hasBareCommands = () =>
-  fs.existsSync(path.join(codexHome(), 'skills', 'plain-speak', 'SKILL.md'));
+const codexRuntimeDir = () => path.join(codexHome(), 'plain-speak');
 
-module.exports = { hasBareCommands, install, uninstall, doctor };
+module.exports = { install, uninstall, doctor };

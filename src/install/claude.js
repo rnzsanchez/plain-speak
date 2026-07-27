@@ -20,7 +20,7 @@ const settingsPath = () => path.join(state.claudeDir(), 'settings.json');
 const skillsDir = () => path.join(state.claudeDir(), 'skills');
 
 function install({ chainStatusline = false } = {}) {
-  const dir = copyRuntime();
+  const dir = copyRuntime('claude');
   const settings = readJson(settingsPath(), {});
   settings.hooks = settings.hooks || {};
 
@@ -79,7 +79,7 @@ function install({ chainStatusline = false } = {}) {
   console.log('  nothing else in your settings was changed');
 }
 
-function uninstall({ keepRuntime = false } = {}) {
+function uninstall() {
   const settings = readJson(settingsPath(), null);
   if (settings && settings.hooks) {
     for (const event of Object.keys(HOOK_EVENTS)) {
@@ -101,11 +101,8 @@ function uninstall({ keepRuntime = false } = {}) {
     writeJson(settingsPath(), settings);
   }
   removeSkills(skillsDir());
-  // Codex hooks point at the same runtime copy, so only a full uninstall removes it.
-  if (!keepRuntime) {
-    for (const sub of ['src', 'bin', 'modes']) {
-      fs.rmSync(path.join(runtimeDir(), sub), { recursive: true, force: true });
-    }
+  for (const sub of ['src', 'bin', 'modes']) {
+    fs.rmSync(path.join(runtimeDir('claude'), sub), { recursive: true, force: true });
   }
   console.log('Claude Code: hooks, badge and commands removed (state.json and mode kept)');
 }
@@ -134,7 +131,7 @@ function doctor() {
       console.log(`  ${there ? 'ok  ' : 'none'} /${name}`);
     }
   }
-  console.log(`  mode: ${state.readMode()}`);
+  console.log(`  mode: ${state.readMode(process.cwd(), 'claude')}`);
 }
 
 const hasBareCommands = () => fs.existsSync(path.join(skillsDir(), 'plain-speak', 'SKILL.md'));

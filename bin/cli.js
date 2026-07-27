@@ -12,7 +12,7 @@ const { rulesFor } = require('../src/hooks/lib');
 
 const USAGE = `plain-speak — terse-response modes with an active hygiene checker
 
-  plain-speak install [--claude] [--codex]   wire up hooks and slash commands
+  plain-speak install [--claude] [--codex]   wire up hooks and skills
   plain-speak install --statusline           also chain the badge onto your statusline
   plain-speak uninstall [--claude|--codex]   remove what it added
   plain-speak uninstall --purge              …and delete the mode and stats too
@@ -35,25 +35,40 @@ function main() {
       const both = !has('--claude') && !has('--codex');
       if (both || has('--claude')) claude.install({ chainStatusline: has('--statusline') });
       if (both || has('--codex')) codex.install();
-      if (!state.readSafe(state.modePath())) state.writeMode('normal');
-      const how = claude.hasBareCommands() || codex.hasBareCommands() ? '/plain-speak cte' : '/plain-speak:init cte';
-      console.log(`\nMode: ${state.readMode()}. Change it in a session: ${how}`);
-      console.log('Restart Claude Code, or run /hooks once, to load the hooks.');
+      if (both || has('--claude')) {
+        if (!state.readSafe(state.modePath('claude'))) state.writeMode('normal', 'claude');
+        const how = claude.hasBareCommands() ? '/plain-speak cte' : '/plain-speak:init cte';
+        const mode = state.readMode(process.cwd(), 'claude');
+        console.log(`\nClaude Code mode: ${mode}. Change it in a session: ${how}`);
+        console.log('Restart Claude Code, or run /hooks once, to load its hooks.');
+      }
+      if ((both || has('--codex')) && fs.existsSync(state.codexDir())) {
+        if (!state.readSafe(state.modePath('codex'))) state.writeMode('normal', 'codex');
+        const mode = state.readMode(process.cwd(), 'codex');
+        console.log(`\nCodex mode: ${mode}. Change it in a session: plain speak cte`);
+        console.log('Restart Codex to load its hooks and skills.');
+      }
       return;
     }
 
     case 'uninstall': {
       const both = !has('--claude') && !has('--codex');
-      if (both || has('--claude')) claude.uninstall({ keepRuntime: has('--claude') });
+      if (both || has('--claude')) claude.uninstall();
       if (both || has('--codex')) codex.uninstall();
       if (has('--purge')) {
-        fs.rmSync(state.homeDir(), { recursive: true, force: true });
-        console.log('Purged ~/.claude/plain-speak — mode and stats are gone');
+        if (both || has('--claude')) {
+          fs.rmSync(state.homeDir('claude'), { recursive: true, force: true });
+          console.log('Purged ~/.claude/plain-speak — mode and stats are gone');
+        }
+        if (both || has('--codex')) {
+          fs.rmSync(state.homeDir('codex'), { recursive: true, force: true });
+          console.log('Purged ~/.codex/plain-speak — mode and stats are gone');
+        }
       }
       return;
     }
 
-    // What /plain-speak runs. No argument: turn it on if it was off, then show
+    // What the mode skill runs. No argument: turn it on if it was off, then show
     // where things stand. With an argument: switch mode.
     case 'status': {
       const wanted = process.argv[3] && !process.argv[3].startsWith('--') ? process.argv[3] : null;
@@ -73,11 +88,13 @@ function main() {
         mode = state.writeMode('normal');
         source = state.modeSource();
       }
-      // Name the commands the user actually has. CLAUDE_PLUGIN_ROOT settles it when the
-      // harness exports it; otherwise the only signal is which bare skill exists on disk,
-      // and Codex counts too — it has no namespace, so its form is always the bare one.
-      const bare = !process.env.CLAUDE_PLUGIN_ROOT && (claude.hasBareCommands() || codex.hasBareCommands());
-      const cmd = bare ? '/plain-speak' : '/plain-speak:init';
+      const codexTarget =
+        process.env.PLAIN_SPEAK_TARGET === 'codex' || Boolean(process.env.PLUGIN_ROOT);
+      const cmd = codexTarget
+        ? 'plain speak'
+        : claude.hasBareCommands()
+          ? '/plain-speak'
+          : '/plain-speak:init';
 
       // Show what the mode sounds like rather than describing it. Verbatim openers from
       // one real run of the same question through Opus 5, with that reply's own token
@@ -98,7 +115,7 @@ function main() {
       console.log(`  switch: ${cmd} off | normal | cte    (--project pins this repo)`);
 
       // A skill's stdout is tool output, so printing the ruleset puts it back in context.
-      // That is the reinit: bare /plain-speak re-arms the rules mid-session, and a switch
+      // That is the reinit: the mode skill re-arms the rules mid-session, and a switch
       // has to send the new mode's rules or nothing changes until the next drift trip.
       const rules = mode === 'off' ? '' : rulesFor(mode);
       if (rules) {

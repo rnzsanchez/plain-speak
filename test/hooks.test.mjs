@@ -84,9 +84,35 @@ test('mode off silences everything', () => {
 });
 
 test('a Codex payload works unchanged', () => {
-  const env = sandbox();
+  const claude = sandbox();
+  const codexHome = fs.mkdtempSync(path.join(os.tmpdir(), 'plain-speak-codex-test-'));
+  fs.mkdirSync(path.join(codexHome, 'plain-speak'), { recursive: true });
+  fs.writeFileSync(path.join(codexHome, 'plain-speak', 'mode'), 'cte');
+  const env = { ...claude, CODEX_HOME: codexHome, PLAIN_SPEAK_TARGET: 'codex' };
   hook('stop.js', { session_id: 'c', last_assistant_message: FUSSY }, env);
   // Codex names the field `prompt`, not `user_prompt`.
   const out = hook('prompt-submit.js', { session_id: 'c', prompt: 'keep going' }, env);
   assert.match(JSON.parse(out).hookSpecificOutput.additionalContext, /drifted/);
+  assert.ok(fs.existsSync(path.join(codexHome, 'plain-speak', 'state.json')));
+  assert.ok(!fs.existsSync(path.join(claude.CLAUDE_CONFIG_DIR, 'plain-speak', 'state.json')));
+});
+
+test('Codex plugin SessionStart refreshes its stable runtime only', () => {
+  const claude = sandbox();
+  const codexHome = fs.mkdtempSync(path.join(os.tmpdir(), 'plain-speak-codex-test-'));
+  fs.mkdirSync(path.join(codexHome, 'plain-speak'), { recursive: true });
+  fs.writeFileSync(path.join(codexHome, 'plain-speak', 'mode'), 'cte');
+
+  const out = hook(
+    'session-start.js',
+    { session_id: 'plugin', source: 'startup' },
+    { ...claude, CODEX_HOME: codexHome, PLUGIN_ROOT: root }
+  );
+
+  assert.match(JSON.parse(out).hookSpecificOutput.additionalContext, /CTE Mode/);
+  assert.ok(fs.existsSync(path.join(codexHome, 'plain-speak', 'bin', 'cli.js')));
+  assert.equal(
+    fs.readFileSync(path.join(claude.CLAUDE_CONFIG_DIR, 'plain-speak', 'mode'), 'utf8'),
+    'cte'
+  );
 });

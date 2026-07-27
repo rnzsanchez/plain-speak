@@ -12,12 +12,12 @@ const HOOK_EVENTS = {
   Stop: 'stop.js',
 };
 
-const runtimeDir = () => state.homeDir();
+const runtimeDir = (target) => state.homeDir(target);
 
 // `npx plain-speak install` runs from a temp npm cache that can be pruned at any
 // time, so the hooks can't point at it. Copy what they need somewhere stable.
-function copyRuntime() {
-  const dir = runtimeDir();
+function copyRuntime(target) {
+  const dir = runtimeDir(target);
   for (const sub of ['src', 'modes', 'bin']) {
     fs.rmSync(path.join(dir, sub), { recursive: true, force: true });
     fs.cpSync(path.join(PKG_ROOT, sub), path.join(dir, sub), { recursive: true });
