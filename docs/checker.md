@@ -14,7 +14,9 @@ flowchart TD
     S --> T{"points ≥ the mode's threshold?"}
     T -->|"no"| C["clean · next prompt carries nothing"]
     T -->|"yes"| D["drift · next prompt carries the rules"]
-    D --> B{"past the backoff threshold?"}
+    D --> S{"drifted 2+ turns<br/>running?"}
+    S -->|"yes"| E["full rules + say so, next turn"]
+    S -->|"no"| B{"past the backoff threshold?"}
     B -->|"no"| F["full rules, next turn (~200 tok)"]
     B -->|"yes"| N["one-line nudge, 4 turns later (~30 tok)"]
 ```
@@ -75,10 +77,20 @@ There is deliberately **no cap.** A cap that runs out stops correcting a model t
 still drifting, which is the opposite of the point. Instead it crosses a threshold and
 eases off:
 
-| | First 3 corrections | After that |
-|---|---|---|
-| Wait between corrections | 1 turn | 4 turns |
-| What gets sent | the mode's full rules (~200 tok) | a one-line nudge (~30 tok) |
+| | First 3 corrections | After that | Drifting 2+ turns running |
+|---|---|---|---|
+| Wait between corrections | 1 turn | 4 turns | 1 turn |
+| What gets sent | the mode's full rules (~200 tok) | a one-line nudge (~30 tok) | the full rules, and a line saying it has now drifted N turns running |
+
+Easing off is right when the corrections are landing and the drift is occasional. It is
+exactly wrong when the model drifts turn after turn: that is evidence the message is too
+weak, and answering it with a longer gap and a shorter message makes it worse. So a
+**streak** of consecutive drifted turns overrides the backoff and escalates instead. One
+clean turn is the only thing that clears the streak — it is the only evidence a
+correction actually landed.
+
+`PLAIN_SPEAK_ESCALATE_AFTER` sets how many consecutive drifted turns trigger that,
+default 2.
 
 Repeated drift usually means the context has grown large — and answering a big context
 with yet more context is the wrong move, so it backs off rather than escalating.
