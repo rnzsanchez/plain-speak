@@ -16,23 +16,43 @@ if (files.length === 0) {
   process.exit(0);
 }
 
-// Latest run wins for a given model+mode.
+// Latest run wins for a given model+effort+mode. Effort has to be part of the key: a
+// `--reasoning none` run and a `--reasoning medium` run of the same cell are different
+// experiments, and keying on model+mode alone let the later one silently replace the
+// earlier one in the table.
 const byModel = new Map();
 for (const f of files.sort()) {
   const r = JSON.parse(fs.readFileSync(path.join(dir, f), 'utf8'));
-  if (!byModel.has(r.model)) byModel.set(r.model, {});
-  byModel.get(r.model)[r.mode] = r;
+  const key = `${r.model} ${r.reasoningEffort || ''}`;
+  if (!byModel.has(key)) byModel.set(key, {});
+  byModel.get(key)[r.mode] = { ...r, stamp: f.slice(0, 19) };
 }
 
 const pct = (from, to) => (from ? ((from - to) / from) * 100 : 0);
 const rows = [];
 const savings = {};
 
-for (const [model, modes] of byModel) {
+const warnings = [];
+
+for (const [, modes] of byModel) {
   const base = modes.off;
   for (const mode of ['normal', 'cte']) {
     const run = modes[mode];
     if (!run) continue;
+    const model = run.model;
+    // The baseline and the arm it is compared against are picked independently, so they
+    // can come from different invocations. Same numbers, different conditions, and
+    // nothing in the table would say so.
+    if (base && base.stamp !== run.stamp) {
+      warnings.push(
+        `${model} ${mode}: compared against an \`off\` baseline from a different run (${base.stamp} vs ${run.stamp})`
+      );
+    }
+    if (base && (base.runs || 1) !== (run.runs || 1)) {
+      warnings.push(
+        `${model} ${mode}: ${run.runs || 1} run(s) compared against a baseline of ${base.runs || 1}`
+      );
+    }
     const cut = base ? pct(base.outputPerTurn, run.outputPerTurn) : null;
     // Where reasoning tokens are reported, the visible-reply cut is the figure that
     // response rules actually influence. Both are shown.
@@ -42,14 +62,18 @@ for (const [model, modes] of byModel) {
         : null;
     rows.push({
       model,
+      effort: run.reasoningEffort || null,
       mode,
       turns: run.turns,
       perTurn: run.outputPerTurn,
       base: base ? base.outputPerTurn : null,
       cut,
       visibleCut,
+      stamp: run.stamp,
     });
-    if (cut != null) {
+    // A pinned reasoning effort is a controlled experiment, not the setting anyone runs
+    // day to day, so it must not become the number `plain-speak stats` quotes at them.
+    if (cut != null && !run.reasoningEffort) {
       savings[model] = savings[model] || {};
       savings[model][mode] = { outputCutPct: Number(cut.toFixed(1)), turns: run.turns };
     }
@@ -57,15 +81,26 @@ for (const [model, modes] of byModel) {
 }
 
 const cell = (v, d = '—') => (v == null ? d : v);
-console.log('| Model | Mode | Turns | Billed out/turn | Rules off | Cut | Visible-only cut |');
-console.log('|---|---|---:|---:|---:|---:|---:|');
-for (const r of rows.sort((a, b) => a.model.localeCompare(b.model) || a.mode.localeCompare(b.mode))) {
+console.log(
+  '| Model | Effort | Mode | Turns | Billed out/turn | Rules off | Cut | Visible-only cut | Measured |'
+);
+console.log('|---|---|---|---:|---:|---:|---:|---:|---|');
+for (const r of rows.sort(
+  (a, b) =>
+    a.model.localeCompare(b.model) ||
+    String(a.effort).localeCompare(String(b.effort)) ||
+    a.mode.localeCompare(b.mode)
+)) {
   const cut = r.cut == null ? '—' : `${r.cut.toFixed(0)}%`;
   const vis = r.visibleCut == null ? '—' : `${r.visibleCut.toFixed(0)}%`;
   console.log(
-    `| ${r.model} | ${r.mode} | ${r.turns} | ${cell(r.perTurn)} | ${cell(r.base)} | ${cut} | ${vis} |`
+    `| ${r.model} | ${cell(r.effort, 'inherited')} | ${r.mode} | ${r.turns} | ${cell(r.perTurn)} | ${cell(r.base)} | ${cut} | ${vis} | ${r.stamp} |`
   );
 }
+
+// Loud on purpose. A mismatched pairing still prints a number, and a number that looks
+// measured is exactly how the contaminated v1 figures got published.
+for (const w of warnings) console.log(`\n! ${w}`);
 
 if (process.argv.includes('--write')) {
   // Written into src/ because it is runtime data: `plain-speak stats` reads it
