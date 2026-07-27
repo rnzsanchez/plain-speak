@@ -28,7 +28,8 @@ One question, asked three times for real: **"explain to me how redis cache works
 
 > Provenance: Claude Code, model `claude-opus-5`, one fresh single-turn session per mode,
 > 25 July 2026, via `claude -p "explain to me how redis cache works" --model claude-opus-5`.
-> Opening lines are verbatim; the token counts are that reply's own `output_tokens`. One
+> Opening lines are the model's own words, with its `##` headings flattened to bold so
+> they render inside a quote. The token counts are that reply's own `output_tokens`. One
 > run each, so treat the percentages as an illustration, not a measurement.
 
 ```
@@ -48,52 +49,49 @@ cte      ███████████████████████�
 
 Nothing injected, nothing checked.
 
-```
-Redis is an in-memory key-value store. That's the whole trick: your data lives in RAM
-instead of on disk, so a lookup takes microseconds instead of the milliseconds a
-database query costs.
-
-## The basic shape
-
-Your app sits between a client and a slow data source (Postgres, an external API, a
-heavy computation). Redis sits beside it:
-…
-```
+> Redis is an in-memory key-value store. That's the whole trick: your data lives in RAM
+> instead of on disk, so a lookup takes microseconds instead of the milliseconds a
+> database query costs.
+>
+> **The basic shape**
+>
+> Your app sits between a client and a slow data source (Postgres, an external API, a
+> heavy computation). Redis sits beside it:
+>
+> …
 
 ### `normal` · `1,466 tokens` · **17% shorter**
 
 The base voice. Plain, answer first, full thoughts welcome, zero fuss.
 
-```
-## What it is
-
-Redis keeps data in RAM, not on disk. That's the whole trick. A lookup is a hash-table
-hit in memory — microseconds — instead of a database query that touches disk, joins
-tables, and takes milliseconds.
-
-You put it *in front of* your slow thing (Postgres, an API, a computed report). It
-stores copies of answers you already worked out.
-…
-```
+> **What it is**
+>
+> Redis keeps data in RAM, not on disk. That's the whole trick. A lookup is a hash-table
+> hit in memory — microseconds — instead of a database query that touches disk, joins
+> tables, and takes milliseconds.
+>
+> You put it *in front of* your slow thing (Postgres, an API, a computed report). It
+> stores copies of answers you already worked out.
+>
+> …
 
 ### `cte` 🧠 · `1,195 tokens` · **32% shorter**
 
 The same voice at twelve. Short. Blunt. Fragments.
 
-```
-**Redis = in-memory key-value store. Cache = you put stuff there before hitting the
-slow thing.**
-
-## Why fast
-- Data lives in RAM. No disk seek.
-- Single-threaded event loop. No lock contention.
-- Dumb data model. Get key, return bytes. ~100k ops/sec, sub-millisecond.
-
-## The core loop (cache-aside)
-1. App needs user 42.
-2. Ask Redis: `GET user:42`.
-…
-```
+> **Redis = in-memory key-value store. Cache = you put stuff there before hitting the
+> slow thing.**
+>
+> **Why fast**
+> - Data lives in RAM. No disk seek.
+> - Single-threaded event loop. No lock contention.
+> - Dumb data model. Get key, return bytes. ~100k ops/sec, sub-millisecond.
+>
+> **The core loop (cache-aside)**
+> 1. App needs user 42.
+> 2. Ask Redis: `GET user:42`.
+>
+> …
 
 Nothing was cut from the answer — all three cover TTLs, eviction, invalidation and the
 thundering herd. `cte` says it in a third fewer tokens. One reply each, though: the
@@ -227,34 +225,23 @@ Yes, on the prose. Median of **5 rounds** per cell, 3-turn sessions, `node bench
 reasoning. 135 sessions, 405 calls. Raw per-run JSON is in
 [`bench/results/`](./bench/results):
 
-```
-                    normal                      cte
-              longer ← 0 → shorter      longer ← 0 → shorter
-claude-opus-5          │███████████   55%        │█████████     47%
-claude-sonnet-5        │████          20%        │████████      42%
-claude-haiku-4-5       │█              7%        │████          21%
-gpt-5.5                │████████      38%        │███████████   56%
-gpt-5.6-sol            │████████      39%        │             −33%  (visible: 8%)
-gpt-5.6-luna           │█████         27%        │███████       34%
-gpt-5.6-terra          │█████         27%        │              4%
-gpt-5.4                │██            12%        │███           17%
-gpt-5.4-mini           │              4%         │████          21%
-```
+| Model | `normal` | `cte` | Better mode |
+|---|---:|---:|---|
+| claude-opus-5 | **55%** | 47% | `normal` |
+| claude-sonnet-5 | 20% | **42%** | `cte` |
+| claude-haiku-4-5 | 7% | **21%** | `cte` |
+| gpt-5.5 | 38% | **56%** | `cte` |
+| gpt-5.6-sol | **39%** | −33% *(visible 8%)* | `normal` |
+| gpt-5.6-luna | 27% | **34%** | `cte` |
+| gpt-5.6-terra | **27%** | 4% | `normal` |
+| gpt-5.4 | 12% | **17%** | `cte` |
+| gpt-5.4-mini | 4% | **21%** | `cte` |
 
-**Every model gains under one mode or the other — but not the same one.**
+Higher is shorter. Negative means the replies got longer.
 
-The better mode differs per model, and it is not guessable:
-
-| Your model | Use | Because |
-|---|---|---|
-| claude-opus-5 | `normal` | 55%, against `cte`'s 47% |
-| claude-sonnet-5 | `cte` | 42%, against `normal`'s 20% |
-| claude-haiku-4-5 | `cte` | 21%, against `normal`'s 7% |
-| gpt-5.5 | `cte` | 56%, the largest cut measured |
-| gpt-5.6-sol | `normal` | 39%; `cte` spikes reasoning tokens 33% |
-| gpt-5.6-luna | `cte` | 34%, against `normal`'s 27% |
-| gpt-5.6-terra | `normal` | 27%, against `cte`'s 4% |
-| gpt-5.4, gpt-5.4-mini | `cte` | 17% and 21%, against 12% and 4% |
+**Every model gains under one mode or the other — but not the same one, and it is not
+guessable.** Opus wants `normal` and Sonnet wants `cte`, though `cte` is the more extreme
+voice. Picking wrong costs Opus 8 points and Sonnet 22.
 
 Codex bills reasoning as output and these figures sum both. No response rule governs how
 long a model thinks, so where the two diverge the visible-reply cut is the honest one —
