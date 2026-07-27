@@ -125,27 +125,22 @@ in your transcript.
 
 ## Install
 
-Claude Code:
+One route per tool, both from a shell:
 
+```sh
+claude plugin marketplace add rnzsanchez/plain-speak
+claude plugin install plain-speak@plain-speak
 ```
-/plugin marketplace add rnzsanchez/plain-speak
-/plugin install plain-speak@plain-speak
-```
-
-Codex:
 
 ```sh
 codex plugin marketplace add rnzsanchez/plain-speak
 codex plugin add plain-speak@plain-speak
 ```
 
-Or use the npx installer:
+Then run the mode command once — `/plain-speak:init` on Claude Code, `$plain-speak:init`
+on Codex. It puts the badge in and clears anything an older install left behind.
 
-```sh
-npx github:rnzsanchez/plain-speak install
-```
-
-→ **[All install routes, what gets written, uninstall](./docs/install.md)**
+→ **[Install, what gets written, uninstall](./docs/install.md)**
 
 ---
 
@@ -161,8 +156,6 @@ Everything runs inside a session. Installing is the only thing you do in a shell
 
 Codex mode prompt: `plain speak off|normal|cte`. Replace the final part with one mode.
 Codex skills use `$` or natural language; Codex does not provide custom slash commands.
-Claude Code keeps its plugin slash commands. With the Claude npx route, they are
-`/plain-speak`, `/plain-speak cte` and `/plain-speak-stats`.
 
 Claude Code commands cannot be triggered by the model. Hooks load at the next session
 start.
@@ -270,7 +263,7 @@ What it costs:
 
 | Cost | Detail |
 |---|---|
-| Settings edits | The npx route adds three hook entries. The plugin route adds none |
+| Settings edits | One line for the badge, on Claude Code. The hooks come from the plugin |
 | Time | Two node starts per turn, ~135 ms, nearly all of it interpreter startup |
 | Accuracy | The checker is a heuristic. It will sometimes be wrong |
 | Savings | Nil or negative on anything but Opus or Sonnet — check your own model first |

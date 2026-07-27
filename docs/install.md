@@ -6,34 +6,34 @@ Pick your tool.
 flowchart LR
     Q{"which tool?"} -->|"Claude Code"| C["Claude marketplace"]
     Q -->|"Codex"| X["Codex marketplace"]
-    Q -->|"both or no marketplace"| N["npx installer"]
     C --> C1["slash commands<br/>~/.claude/plain-speak/"]
     X --> X1["skills + natural language<br/>~/.codex/plain-speak/"]
-    N --> B["installs one or both<br/>state stays separate"]
 ```
+
+One route per tool: the GitHub plugin marketplace. Install both if you use both — they
+keep separate state and neither knows about the other.
 
 ## Plugin (Claude Code)
 
-The cleanest option: no edits to your `settings.json` at all, and the badge is
-picked up automatically by any statusline that renders plugin badges.
-
-```
-/plugin marketplace add rnzsanchez/plain-speak
-/plugin install plain-speak@plain-speak
-```
-
-Remove it the same way: `/plugin uninstall plain-speak`. The same thing works from a
-shell, which is handy for updates:
+From a shell, no session needed:
 
 ```sh
 claude plugin marketplace add rnzsanchez/plain-speak
 claude plugin install plain-speak@plain-speak
+```
+
+Update it the same way:
+
+```sh
 claude plugin marketplace update plain-speak && claude plugin update plain-speak@plain-speak
 ```
 
-This is the route that gets the badge into a statusline automatically: statuslines
-that render plugin badges look for a `*-statusline.sh` under each installed plugin,
-and plain-speak ships one.
+The same two steps work inside a session as `/plugin marketplace add …` and
+`/plugin install …`, and `/plugin uninstall plain-speak` removes it.
+
+Hooks load on the next session; `/hooks` reloads them straight away. Run
+`/plain-speak:init` once afterwards — it puts the badge in your statusline and clears
+anything an older install left behind.
 
 ## Plugin (Codex)
 
@@ -57,70 +57,6 @@ Codex skills use `$` or natural language, not custom slash commands:
 
 Exact mode pattern: `plain speak off|normal|cte`. Replace the final part with one mode.
 Codex keeps its mode and stats under `~/.codex/plain-speak/`.
-
-## npx (Claude Code and Codex)
-
-Use this when you want one installer for both tools, or do not want the marketplace
-route.
-
-```sh
-npx github:rnzsanchez/plain-speak install
-```
-
-```sh
-npx github:rnzsanchez/plain-speak install --claude       # one tool only
-npx github:rnzsanchez/plain-speak install --codex
-npx github:rnzsanchez/plain-speak install --statusline   # also chain the badge on
-npx github:rnzsanchez/plain-speak uninstall
-```
-
-Hooks load on the next session. In Claude Code, `/hooks` reloads them immediately.
-
-## From a clone
-
-```sh
-git clone git@github.com:rnzsanchez/plain-speak.git
-cd plain-speak
-node bin/cli.js install
-```
-
-## Commands differ by tool
-
-Claude Code namespaces every command a plugin provides, so a plugin-only install cannot
-give you a bare `/plain-speak`. The npx installer places user-level commands, which can.
-
-| Tool | Marketplace plugin | npx |
-|---|---|---|
-| Claude Code mode | `/plain-speak:init cte` | `/plain-speak cte` |
-| Claude Code stats | `/plain-speak:stats` | `/plain-speak-stats` |
-| Codex mode | `plain speak cte` | `plain speak cte` |
-| Codex stats | `$plain-speak:stats` | `$plain-speak-stats` |
-
-Codex has built-in slash commands, but plugins do not add custom ones. Use `$` to invoke
-a skill directly, or ask in natural language.
-
-On Claude Code, you never get both command sets. If the plugin is enabled in
-`~/.claude/settings.json`, the npx installer wires the hooks and leaves commands to the
-plugin. This avoids duplicates in the picker.
-
-## What the npx installer writes
-
-| Path | What |
-|---|---|
-| `~/.claude/plain-speak/` | Runtime copy, mode file, `state.json` |
-| `~/.claude/settings.json` | Three hook entries, added alongside whatever is already there. Backed up to `.plain-speak-backup` first |
-| `~/.claude/skills/plain-speak*/` | The two slash commands — skipped when the plugin is enabled |
-| `~/.codex/plain-speak/` | Codex runtime copy, mode file, `state.json` |
-| `~/.codex/hooks.json` | The same three hooks |
-| `~/.codex/config.toml` | `[features] hooks = true`, if not already set |
-| `~/.codex/skills/plain-speak*/` | The two Codex skills |
-
-Nothing unrelated is replaced or removed. Reinstalling refreshes plain-speak's own
-runtime and skills without duplicating hooks.
-
-The runtime copy is not optional: `npx` runs from a temp cache that can be pruned
-at any time, so hooks cannot point at it. Claude Code and Codex get separate copies.
-
 ## Choosing a mode per project
 
 Global state stays separate:
@@ -142,28 +78,53 @@ On Claude Code, pin a project with `/plain-speak:init cte --project`. For Codex,
 the mode to `.plain-speak-codex-mode`. Commit either file to share the choice, or add it
 to `.gitignore` to keep it yours.
 
+## Where things live
+
+| Path | What |
+|---|---|
+| `~/.claude/plain-speak/` | Claude runtime copy, mode file, `state.json` |
+| `~/.codex/plain-speak/` | Codex runtime copy, mode file, `state.json` |
+| `~/.claude/settings.json` | The badge, and nothing else |
+| `~/.codex/config.toml` | `[features] hooks = true`, if it was not already set |
+
+The hooks themselves are declared by the plugin, so neither tool's settings file
+carries them. Each tool keeps its own runtime copy at a fixed path: a plugin's own
+directory has its version in the path, so anything pointing there would break on the
+next update.
+
 ## The badge
 
-The badge shows the active mode and is on whenever plain-speak is. Switching to `off`
-hides it, since there is nothing to report.
+The badge shows the active mode, and is on whenever plain-speak is. Switching to `off`
+hides it, since there is nothing to report. Claude Code only — Codex builds its own
+status line and takes no command to render one.
 
-The installer **does not touch a statusline you already have.** Put the badge where
-your own statusline wants it, or pass `--statusline` to have it prepended:
+Running the mode command puts the badge in for you. If you already have a statusline,
+the badge goes **in front of yours**, and yours keeps running:
 
-```sh
-bash ~/.claude/plain-speak/src/plain-speak-statusline.sh
+```json
+"statusLine": { "command": "bash ~/.claude/plain-speak/src/plain-speak-statusline.sh; bash ~/mine.sh" }
 ```
 
-If you install as a plugin instead, statuslines that scan installed plugins for a
-`*-statusline.sh` will find it on their own.
+It is idempotent. Running the command again changes nothing and says nothing. To place
+the badge yourself instead, remove that first segment and call the script from wherever
+your own statusline wants it.
 
 ## Codex and hook trust
 
-Codex asks you to trust hook sources the first time they run. Accept once. The
-installer does not pass `--dangerously-bypass-hook-trust` for you — that prompt is
-a real check and it is yours to answer.
+Codex asks you to trust hook sources the first time they run. Accept once. Nothing here
+passes `--dangerously-bypass-hook-trust` for you — that prompt is a real check and it is
+yours to answer. Until you accept, the hooks are skipped silently.
 
-## Uninstall
+## Leaving, and moving off an older install
+
+Versions before 2.14.0 shipped an `npx` installer that wrote hooks into
+`~/.claude/settings.json` and `~/.codex/hooks.json`. The plugin declares those same
+three hooks, so a machine carrying both injects the rules twice.
+
+You do not have to do anything about it. The mode command clears the old wiring the
+first time it runs, for the tool it is running under, and says what it removed.
+
+To remove plain-speak altogether:
 
 ```sh
 npx github:rnzsanchez/plain-speak uninstall            # both tools
@@ -172,11 +133,7 @@ npx github:rnzsanchez/plain-speak uninstall --codex
 npx github:rnzsanchez/plain-speak uninstall --purge    # and delete the mode and stats
 ```
 
-Removes hooks, skills, badge wiring and that tool's runtime. The other tool keeps
-working. Without `--purge`, each tool's mode and `state.json` remain so a reinstall
-keeps its history.
-
-**Running both routes for one tool double-injects.** If its marketplace plugin is
-installed, remove that tool's npx hooks with `uninstall --claude` or
-`uninstall --codex`. Its mode and `state.json` stay behind. Use `--purge` to remove
-them too.
+That takes out the badge, any leftover hooks and skills, and that tool's runtime. The
+other tool keeps working. Without `--purge`, each tool's mode and `state.json` stay, so
+installing again keeps its history. Uninstalling does not remove the plugin — use
+`claude plugin uninstall plain-speak` or `codex plugin remove plain-speak@plain-speak`.

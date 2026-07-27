@@ -13,13 +13,13 @@ Both sides, measured where measurement was possible.
 | It replaces nothing | Only hook entries whose own command contains `plain-speak` are ever touched. A clean machine and a plugin-loaded one end up in the same state. |
 | Per-project modes | Claude Code uses `.plain-speak-mode`; Codex uses `.plain-speak-codex-mode`. `PLAIN_SPEAK_MODE` overrides either for one shell. |
 | Nothing to trust but Node | Zero dependencies, one bash script, about 1,000 lines of source in total. |
-| Reversible | `uninstall` removes only plain-speak entries; `uninstall --purge` removes its data too. The original backup remains available. |
+| Reversible | `uninstall` removes only plain-speak entries; `uninstall --purge` removes its data too. The original backup remains available. Uninstalling the plugin is separate, and done with your tool's own plugin command. |
 
 ## What it costs
 
 | Downside | Grounding |
 |---|---|
-| It adds hook settings | npx route only: three hook entries in `~/.claude/settings.json` and `~/.codex/hooks.json`. A backup of the original is written first. Marketplace routes leave hook settings alone; each tool still records the plugin install. |
+| It writes one settings line | The plugin declares its own hooks, so no hook entry is written anywhere. The mode command adds the badge to `~/.claude/settings.json` on Claude Code, in front of any statusline you already have, and backs the file up first. Codex gets no badge and only `[features] hooks = true`. |
 | Two node starts per turn | Measured on an M-series Mac: `UserPromptSubmit` 79 ms, `Stop` 55 ms. A bare `node -e ''` is **76 ms** on the same machine, so nearly all of it is interpreter startup and plain-speak's own work is single-digit milliseconds. It is still ~135 ms of wall clock per turn. |
 | The badge re-renders as you type | Measured at 27 ms, against 25 ms for `bash -c :`. Builtins only, one small file read, so roughly 2 ms is ours. |
 | The checker is a heuristic | It will sometimes miss a fussy reply and sometimes flag one that needed a long sentence — `cte` more, since it trips on a single hit. Quoting a phrase no longer counts as using it, which removed the biggest false-positive source. |
@@ -53,10 +53,10 @@ the lot.
 ## Living with your other tools
 
 - Only hook entries whose own command contains `plain-speak` are added or removed. Every other hook on the same event is carried through untouched.
-- A statusline you already have is left exactly as it was, unless you pass `--statusline`.
-- The npx installer leaves unrelated plugins, permissions, environment, marketplaces and theme untouched.
+- A statusline you already have keeps running: the badge is prepended, never substituted, and removing that one segment puts it back.
+- Unrelated plugins, permissions, environment, marketplaces and theme are never touched.
 - Claude Code commands are namespaced and marked `disable-model-invocation`. Codex uses skills or natural language, not custom slash commands.
-- Installing twice does not stack duplicate hooks.
+- The mode command is idempotent: run it as often as you like and it changes nothing once the machine is right.
 
 If you already run your own always-on rules hook, plain-speak does **not** remove it.
 Both fire, so the rules go in on every prompt as well as on drift — turn yours off if

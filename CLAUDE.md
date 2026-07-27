@@ -32,7 +32,7 @@ node bench/report.mjs --write     # results table, and feed src/savings.json
 | `src/install/*.js` | Settings patching for each tool; `shared.js` holds what both need. |
 | `modes/*.md` | The rule text. `normal` is the base voice, `cte` is the same voice at twelve. |
 | `.claude-plugin/`, `.codex-plugin/`, `.agents/plugins/`, `hooks/` | Tool-specific plugin and marketplace manifests plus shared hooks. Claude Code uses `${CLAUDE_PLUGIN_ROOT}`; Codex resolves its own plugin runtime. Neither route edits settings. |
-| `skills/` | Two skills. Claude Code namespaces plugin skills as `/plain-speak:init` and `/plain-speak:stats`. Codex invokes them with `$` or natural language; never document them as custom slash commands. `copySkills()` renames copied npx skills and their frontmatter together. |
+| `skills/` | Two skills. Claude Code namespaces plugin skills as `/plain-speak:init` and `/plain-speak:stats`. Codex invokes them with `$` or natural language; never document them as custom slash commands. |
 | `docs/` | Install, checker, benchmark, tradeoffs. The README links out rather than growing. |
 
 Claude Code and Codex fire the same three events with near-identical payloads, so
@@ -42,16 +42,16 @@ on Codex.
 
 ## Things that will bite you
 
-- **Installing is additive. Keep it that way.** `isOurs()` matches only commands
-  containing `plain-speak`; nothing else is ever filtered out of a user's settings.
-  Do not add "helpfully remove the old thing" logic — a fresh machine and a
-  plugin-loaded one must end up in the same state.
+- **Only ever touch our own entries.** `isOurs()` matches commands containing
+  `plain-speak`; nothing else is filtered out of a user's settings, ever. `tidy()`
+  removes plain-speak's own superseded wiring and nothing besides.
 - **The `Stop` hook must never block or print.** Making the model spend a turn
   being told to be shorter costs more than the drift did.
 - **Hooks must always exit 0.** `lib.run()` swallows everything for that reason.
   A throwing hook breaks someone's session.
-- **`copyRuntime()` is not optional.** `npx` runs from a temp cache that gets
-  pruned, so hooks can never point at the package directory.
+- **`copyRuntime()` is not optional.** A plugin directory carries its version in the
+  path, so anything written into a settings file pointing there breaks on the next
+  update. The badge and the Codex skills both resolve a fixed `plain-speak/` copy.
 - **Transcript rows repeat.** One assistant message appears once per content
   block, all carrying the same `usage`. Dedupe on `message.id` or totals inflate
   roughly threefold.
@@ -74,13 +74,14 @@ on Codex.
 - **Codex has no custom plugin slash commands.** Document `$plain-speak:init`,
   `$plain-speak:stats` and exact mode prompt `plain speak off|normal|cte`. Keep
   Claude Code's existing slash commands unchanged.
-- **Skill directory name and frontmatter `name` must match.** `copySkills()` renames
-  both together. Change one without the other and the command silently fails to load.
+- **Skill directory name and frontmatter `name` must match.** Change one without the
+  other and the command silently fails to load, with nothing said about why.
 - **The badge script must keep its `*-statusline.sh` name.** Statuslines that render
   plugin badges find it by globbing that pattern under the plugin's install path.
   Renaming it makes the badge silently vanish for plugin users.
-- **The installer never touches a statusline that already exists** unless
-  `--statusline` is passed. Rearranging someone's status bar is not its business.
+- **The badge is prepended, never substituted.** `tidy()` adds it in front of whatever
+  statusline is already configured, and that statusline keeps running. It writes only
+  when the badge is absent, so running the mode command twice changes nothing.
 - **The statusline is bash on purpose.** It runs on every keystroke; node's
   startup is too slow. It also refuses symlinks and strips control bytes, because
   its input file gets rendered straight to the terminal.
