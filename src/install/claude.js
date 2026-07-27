@@ -3,6 +3,7 @@
 // already there, and the /plain-speak slash commands.
 
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
 const state = require('../state');
 const {
@@ -17,6 +18,22 @@ const {
 
 const settingsPath = () => path.join(state.claudeDir(), 'settings.json');
 const skillsDir = () => path.join(state.claudeDir(), 'skills');
+
+// A statusline can render plugin badges itself, by globbing `*-statusline.sh` under each
+// installed plugin. Putting our badge in front of one of those draws it twice, so read
+// the scripts the statusline actually runs and look for that glob.
+// ponytail: matches the `*-statusline.sh` convention only. A statusline that finds plugin
+// badges some other way would still double up; teach it that shape when one turns up.
+function rendersPluginBadges(command) {
+  for (const token of command.split(/[\s;|&]+/)) {
+    if (!/\.(sh|bash)$/.test(token)) continue;
+    const file = token.replace(/^["']|["']$/g, '').replace(/^~/, os.homedir());
+    try {
+      if (fs.readFileSync(file, 'utf8').includes('-statusline.sh')) return true;
+    } catch {}
+  }
+  return false;
+}
 
 // Everything the plugin cannot do for itself, done once when the mode command runs:
 // clear the wiring an older standalone install left behind, and put the badge in the
@@ -55,8 +72,9 @@ function tidy() {
     settings.statusLine = { type: 'command', command: badge };
     notes.push('badge installed as your statusline');
     changed = true;
-  } else if (!existing.includes('plain-speak')) {
-    // Yours stays yours — the badge goes in front of it, never instead of it.
+  } else if (!existing.includes('plain-speak') && !rendersPluginBadges(existing)) {
+    // Yours stays yours — the badge goes in front of it, never instead of it. The badge
+    // script emits its own trailing space, so the two never run together.
     settings.statusLine = { ...settings.statusLine, type: 'command', command: `${badge}; ${existing}` };
     notes.push('badge added to the front of your statusline');
     changed = true;

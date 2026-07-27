@@ -2,6 +2,7 @@
 # plain-speak — statusline badge. Bash on purpose: this runs on every keystroke,
 # and node's startup cost is too high for that.
 #
+# The badge ends with a space so it never runs into whatever follows it.
 # Chain it into your existing statusline rather than replacing it:
 #   "statusLine": { "type": "command",
 #     "command": "bash ~/.claude/plain-speak/src/plain-speak-statusline.sh; bash ~/mine.sh" }
@@ -24,7 +25,7 @@ MODE="${MODE//[!A-Za-z-]/}"   # strip anything that could carry a terminal escap
 shopt -s nocasematch
 
 case "$MODE" in
-  normal) printf '\033[38;5;79m[PLAIN-SPEAK]\033[0m' ;;
-  cte)    printf '\033[38;5;170m[PLAIN-SPEAK 🧠 CTE]\033[0m' ;;
+  normal) printf '\033[38;5;79m[PLAIN-SPEAK]\033[0m ' ;;
+  cte)    printf '\033[38;5;170m[PLAIN-SPEAK 🧠 CTE]\033[0m ' ;;
   *)      exit 0 ;;  # off, empty, or anything unrecognised renders nothing
 esac
