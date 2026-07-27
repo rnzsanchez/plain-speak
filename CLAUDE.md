@@ -82,6 +82,10 @@ on Codex.
 - **The badge is prepended, never substituted.** `tidy()` adds it in front of whatever
   statusline is already configured, and that statusline keeps running. It writes only
   when the badge is absent, so running the mode command twice changes nothing.
+- **A statusline that already renders plugin badges is left alone.** Those run every
+  installed plugin's `*-statusline.sh` themselves, so prepending ours draws it twice.
+  `rendersPluginBadges()` reads the scripts the statusline runs and looks for that glob.
+  Never special-case a named statusline tool — match the convention, not the product.
 - **The statusline is bash on purpose.** It runs on every keystroke; node's
   startup is too slow. It also refuses symlinks and strips control bytes, because
   its input file gets rendered straight to the terminal.

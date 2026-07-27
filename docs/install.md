@@ -98,8 +98,16 @@ The badge shows the active mode, and is on whenever plain-speak is. Switching to
 hides it, since there is nothing to report. Claude Code only — Codex builds its own
 status line and takes no command to render one.
 
-Running the mode command puts the badge in for you. If you already have a statusline,
-the badge goes **in front of yours**, and yours keeps running:
+Running the mode command puts the badge in for you:
+
+| Your setup | What it does |
+|---|---|
+| No statusline | the badge becomes your statusline |
+| A statusline of your own | the badge goes in front, yours keeps running behind it |
+| A statusline that renders plugin badges | nothing — it already draws this one |
+
+That last case is detected by reading the scripts your statusline runs and looking for
+the `*-statusline.sh` glob plugin badges are found by. Chained, it looks like this:
 
 ```json
 "statusLine": { "command": "bash ~/.claude/plain-speak/src/plain-speak-statusline.sh; bash ~/mine.sh" }
