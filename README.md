@@ -213,9 +213,10 @@ eightfold. No benchmark for your model, no figure at all.
 
 ## The side effect: does it save tokens?
 
-On Claude models, yes. Median of **5 rounds** per cell, 3-turn sessions, `node
-bench/run.mjs --repeat 5` — Claude through `claude -p`, GPT through `codex exec`. 135
-sessions, 405 calls. Raw per-run JSON is in [`bench/results/`](./bench/results):
+Yes, on the prose. Median of **5 rounds** per cell, 3-turn sessions, `node bench/run.mjs
+--repeat 5` — Claude through `claude -p`, GPT through `codex exec` at pinned `medium`
+reasoning. 135 sessions, 405 calls. Raw per-run JSON is in
+[`bench/results/`](./bench/results):
 
 ```
                     normal                      cte
@@ -223,15 +224,15 @@ sessions, 405 calls. Raw per-run JSON is in [`bench/results/`](./bench/results):
 claude-opus-5          │███████████   55%        │█████████     47%
 claude-sonnet-5        │████          20%        │████████      42%
 claude-haiku-4-5       │█              7%        │████          21%
-gpt-5.6-terra          │██             9%        │██            10%
-gpt-5.6-sol            │              −2%        │██             9%
-gpt-5.6-luna         ░░│             −11%        │               1%
-gpt-5.5                │              −1%       ░│              −7%
-gpt-5.4               ░│              −6%        │              −2%
-gpt-5.4-mini           │              −1%      ░░│              −8%
+gpt-5.5                │████████      38%        │███████████   56%
+gpt-5.6-sol            │████████      39%        │             −33%  (visible: 8%)
+gpt-5.6-luna           │█████         27%        │███████       34%
+gpt-5.6-terra          │█████         27%        │              4%
+gpt-5.4                │██            12%        │███           17%
+gpt-5.4-mini           │              4%         │████          21%
 ```
 
-**Every Claude model gains. No GPT model reliably does.**
+**Every model gains under one mode or the other — but not the same one.**
 
 The better mode differs per model, and it is not guessable:
 
@@ -240,16 +241,19 @@ The better mode differs per model, and it is not guessable:
 | claude-opus-5 | `normal` | 55%, against `cte`'s 47% |
 | claude-sonnet-5 | `cte` | 42%, against `normal`'s 20% |
 | claude-haiku-4-5 | `cte` | 21%, against `normal`'s 7% |
-| any GPT model | either, for the readability | −11% to +10%, all of it inside the noise |
+| gpt-5.5 | `cte` | 56%, the largest cut measured |
+| gpt-5.6-sol | `normal` | 39%; `cte` spikes reasoning tokens 33% |
+| gpt-5.6-luna | `cte` | 34%, against `normal`'s 27% |
+| gpt-5.6-terra | `normal` | 27%, against `cte`'s 4% |
+| gpt-5.4, gpt-5.4-mini | `cte` | 17% and 21%, against 12% and 4% |
+
+Codex bills reasoning as output and these figures sum both. No response rule governs how
+long a model thinks, so where the two diverge the visible-reply cut is the honest one —
+gpt-5.6-sol under `cte` is the one case they disagree sharply.
 
 A model that measures badly can still be worth running: the rules exist to make the reply
 readable, and a readable reply that costs the same is still the better reply. Read the
 sample replies at the top and judge those.
-
-Earlier versions of this table ran the benchmark inside this repo, so the `off` baseline
-inherited its `CLAUDE.md` and was already terse — Opus `off` reads 865 tokens per turn on
-a clean baseline against 618 on the old one. Several numbers moved more than 20 points
-when that was fixed. [The full story](./RESULTS.md).
 
 → **[Method and caveats](./docs/benchmark.md)** · **[Full numbers](./RESULTS.md)**
 
