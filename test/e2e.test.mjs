@@ -498,3 +498,19 @@ test('e2e: a hook fed garbage still exits 0 and stays silent', () => {
     assert.equal(out, '', `${name} must stay quiet on bad input`);
   }
 });
+
+// The plugin route leaves hooks.json empty on purpose, so a doctor that only reads
+// hooks.json calls a healthy plugin install broken.
+test('e2e: doctor credits the Codex plugin for hooks that hooks.json does not carry', () => {
+  const { env, codexHome } = sandbox();
+  const config = path.join(codexHome, 'config.toml');
+
+  fs.writeFileSync(config, '[features]\nhooks = true\n');
+  assert.match(run(env, 'doctor'), /MISS SessionStart/, 'no plugin, no credit');
+
+  fs.appendFileSync(config, '\n[plugins."plain-speak@plain-speak"]\nenabled = true\n');
+  const out = run(env, 'doctor');
+  for (const event of ['SessionStart', 'UserPromptSubmit', 'Stop']) {
+    assert.match(out, new RegExp(`ok   ${event} \\(from the plugin\\)`));
+  }
+});

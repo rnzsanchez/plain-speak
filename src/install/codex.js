@@ -24,6 +24,12 @@ function featureEnabled(toml) {
   return Boolean(section && /^\s*hooks\s*=\s*true/m.test(section));
 }
 
+// Same scoping reason as featureEnabled: the plugin's own table, not a stray key.
+function pluginInstalled(toml) {
+  const section = toml.split(/^\[/m).find((s) => s.startsWith('plugins."plain-speak@'));
+  return Boolean(section && /^\s*enabled\s*=\s*true/m.test(section));
+}
+
 function enableHooksFeature() {
   const file = configPath();
   let toml = '';
@@ -102,15 +108,19 @@ function doctor() {
   if (!fs.existsSync(codexHome())) return console.log('Codex\n  not installed');
   const config = readJson(hooksPath(), {});
   const hooks = config.hooks || {};
-  console.log('Codex');
-  for (const event of Object.keys(HOOK_EVENTS)) {
-    const wired = (hooks[event] || []).some((g) => (g.hooks || []).some((h) => isOurs(h.command)));
-    console.log(`  ${wired ? 'ok  ' : 'MISS'} ${event}`);
-  }
   let toml = '';
   try {
     toml = fs.readFileSync(configPath(), 'utf8');
   } catch {}
+  // A plugin install wires its hooks from the plugin's own manifest, so hooks.json is
+  // empty by design. Reporting MISS there makes a healthy install look broken.
+  const plugin = pluginInstalled(toml);
+  console.log('Codex');
+  for (const event of Object.keys(HOOK_EVENTS)) {
+    const wired = (hooks[event] || []).some((g) => (g.hooks || []).some((h) => isOurs(h.command)));
+    if (wired) console.log(`  ok   ${event}`);
+    else console.log(`  ${plugin ? 'ok  ' : 'MISS'} ${event}${plugin ? ' (from the plugin)' : ''}`);
+  }
   console.log(`  ${featureEnabled(toml) ? 'ok  ' : 'MISS'} [features] hooks`);
 }
 
