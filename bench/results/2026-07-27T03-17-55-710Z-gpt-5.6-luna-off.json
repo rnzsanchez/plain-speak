@@ -1,0 +1,54 @@
+{
+  "model": "gpt-5.6-luna",
+  "mode": "off",
+  "reasoningEffort": "medium",
+  "turns": 3,
+  "outputTokens": 1169,
+  "outputPerTurn": 390,
+  "visibleOutputTokens": 1028,
+  "reasoningTokens": 165,
+  "inputTokens": 116293,
+  "cacheRead": 83456,
+  "cacheCreate": 0,
+  "costUsd": null,
+  "turnResults": [
+    {
+      "prompt": "What is the difference between a git merge and a git rebase?",
+      "outputTokens": 241,
+      "visibleOutputTokens": 190,
+      "reasoningTokens": 51,
+      "inputTokens": 16838,
+      "cacheRead": 9984,
+      "cacheCreate": 0,
+      "costUsd": null
+    },
+    {
+      "prompt": "Should I use a UUID or an auto-increment integer for a primary key?",
+      "outputTokens": 400,
+      "visibleOutputTokens": 324,
+      "reasoningTokens": 76,
+      "inputTokens": 38274,
+      "cacheRead": 26112,
+      "cacheCreate": 0,
+      "costUsd": null
+    },
+    {
+      "prompt": "Explain what a database index does.",
+      "outputTokens": 528,
+      "visibleOutputTokens": 452,
+      "reasoningTokens": 76,
+      "inputTokens": 61181,
+      "cacheRead": 47360,
+      "cacheCreate": 0,
+      "costUsd": null
+    }
+  ],
+  "runs": 5,
+  "outputPerTurnRuns": [
+    390,
+    443,
+    410,
+    383,
+    330
+  ]
+}
