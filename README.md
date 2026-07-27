@@ -31,9 +31,22 @@ One question, asked three times for real: **"explain to me how redis cache works
 > Opening lines are verbatim; the token counts are that reply's own `output_tokens`. One
 > run each, so treat the percentages as an illustration, not a measurement.
 
-### `off` — nothing injected, nothing checked
+```
+                                                    output    shorter
+off      ████████████████████████████████████████    1,765          —
+normal   ██████████████████████████████████          1,466        17%
+cte      ███████████████████████████                 1,195        32%
+```
 
-`1,765 output tokens`
+| Mode | The voice | Reach for it when |
+|---|---|---|
+| `off` | untouched — whatever the model does by default | you want nothing between you and the model |
+| `normal` | plain, answer first, full thoughts welcome, zero fuss | most of the time |
+| `cte` 🧠 | short, blunt, fragments, no paragraphs | you know the topic and want the facts |
+
+### `off` · `1,765 tokens`
+
+Nothing injected, nothing checked.
 
 ```
 Redis is an in-memory key-value store. That's the whole trick: your data lives in RAM
@@ -47,11 +60,9 @@ heavy computation). Redis sits beside it:
 …
 ```
 
-### `normal` — the base voice
+### `normal` · `1,466 tokens` · **17% shorter**
 
-Plain, answer first, full thoughts welcome, zero fuss.
-
-`1,466 output tokens` · **17% shorter**
+The base voice. Plain, answer first, full thoughts welcome, zero fuss.
 
 ```
 ## What it is
@@ -65,11 +76,9 @@ stores copies of answers you already worked out.
 …
 ```
 
-### `cte` 🧠 — the same voice at twelve
+### `cte` 🧠 · `1,195 tokens` · **32% shorter**
 
-Short. Blunt. Fragments.
-
-`1,195 output tokens` · **32% shorter**
+The same voice at twelve. Short. Blunt. Fragments.
 
 ```
 **Redis = in-memory key-value store. Cache = you put stuff there before hitting the
