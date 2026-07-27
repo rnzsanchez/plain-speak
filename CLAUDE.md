@@ -114,6 +114,13 @@ Both of these cost a full run of silent zeros before they were found:
 - **`--skip-git-repo-check` is required** or Codex refuses to run outside a repo.
 - `run.mjs` refuses to save a result with zero output tokens. Keep that: a zero that
   gets written to disk reads as "measured" forever after.
+- **Never push to this repo while a Codex benchmark is running.** Codex stores
+  `last_revision` per marketplace and re-clones when upstream moves, rebuilding
+  `~/.codex/.tmp/marketplaces/plain-speak/`, `~/.codex/plugins/cache/plain-speak/` and the
+  `config.toml` entries. The swap is not atomic — orphaned `marketplace-upgrade-*`
+  directories under `.tmp/marketplaces/.staging/` are ones that never completed. A push
+  mid-run tears down the plugin being measured, and a failed swap turns the remaining
+  cells into off-vs-off without saying anything.
 
 ## Benchmark honesty
 
@@ -130,11 +137,17 @@ The line says "roughly" and names where the percentage came from, because the sp
 apportioned by character size (usage is per message, not per block) and the benchmark
 measured a different kind of turn.
 
-The results are strongly model-dependent and the docs must keep saying so. v3, medians
-of 5 rounds on a clean baseline: Opus 5 `normal` 55% / `cte` 47%; Sonnet 5 20% / 42%;
-Haiku 4.5 7% / 21%; every GPT model between −11% and +10%, which is noise. The better
-mode differs per model — do not describe `cte` as "more savings". Do not reintroduce a
-single headline number.
+The results are strongly model-dependent and the docs must keep saying so. Medians of 5
+rounds on a clean baseline: Opus 5 `normal` 55% / `cte` 47%; Sonnet 5 20% / 42%; Haiku
+4.5 7% / 21%. GPT models at pinned `medium` reasoning: gpt-5.5 38% / 56%; gpt-5.6-sol
+39% / −33% (visible 8%); gpt-5.6-luna 27% / 34%; gpt-5.6-terra 27% / 4%; gpt-5.4 12% /
+17%; gpt-5.4-mini 4% / 21%. The better mode differs per model — do not describe `cte` as
+"more savings". Do not reintroduce a single headline number.
+
+Every GPT figure measured before 2026-07-27 was taken while the Codex hooks were not
+firing, so all three arms were effectively `off`. Those numbers said "no GPT model gains";
+they were comparing off against off. Never quote a GPT row without checking the run
+injected.
 
 One run is not a result, and neither is a contaminated baseline. Opus `cte` read 52% on
 one run and 29% over five; Opus `off` read 618 tokens per turn measured inside this repo
