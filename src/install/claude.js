@@ -22,8 +22,9 @@ const skillsDir = () => path.join(state.claudeDir(), 'skills');
 // A statusline can render plugin badges itself, by globbing `*-statusline.sh` under each
 // installed plugin. Putting our badge in front of one of those draws it twice, so read
 // the scripts the statusline actually runs and look for that glob.
-// ponytail: matches the `*-statusline.sh` convention only. A statusline that finds plugin
-// badges some other way would still double up; teach it that shape when one turns up.
+// Known ceiling: this matches the `*-statusline.sh` convention only. A statusline that
+// finds plugin badges some other way would still double up — teach it that shape when
+// one turns up.
 function rendersPluginBadges(command) {
   for (const token of command.split(/[\s;|&]+/)) {
     if (!/\.(sh|bash)$/.test(token)) continue;
