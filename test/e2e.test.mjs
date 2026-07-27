@@ -48,111 +48,50 @@ const hook = (env, name, input, cwd = os.tmpdir()) =>
   });
 
 const readJson = (f) => JSON.parse(fs.readFileSync(f, 'utf8'));
+
+// What an older standalone install left behind. Built by hand, because the command that
+// used to write it is gone — but the machines it ran on still exist, so cleaning up
+// after it is still the job.
+function legacyClaude(claudeDir, extra = {}) {
+  const hooks = path.join(claudeDir, 'plain-speak', 'src', 'hooks');
+  fs.mkdirSync(hooks, { recursive: true });
+  const ours = (script) => ({ hooks: [{ type: 'command', command: `node "${path.join(hooks, script)}"` }] });
+  const settings = {
+    ...extra,
+    hooks: {
+      ...(extra.hooks || {}),
+      SessionStart: [...((extra.hooks || {}).SessionStart || []), ours('session-start.js')],
+      UserPromptSubmit: [ours('prompt-submit.js')],
+      Stop: [ours('stop.js')],
+    },
+  };
+  fs.writeFileSync(path.join(claudeDir, 'settings.json'), JSON.stringify(settings, null, 2));
+  for (const name of ['plain-speak', 'plain-speak-stats']) {
+    fs.mkdirSync(path.join(claudeDir, 'skills', name), { recursive: true });
+    fs.writeFileSync(path.join(claudeDir, 'skills', name, 'SKILL.md'), `name: ${name}\n`);
+  }
+  return settings;
+}
+
+function legacyCodex(codexHome) {
+  const hooks = path.join(codexHome, 'plain-speak', 'src', 'hooks');
+  fs.mkdirSync(hooks, { recursive: true });
+  fs.writeFileSync(
+    path.join(codexHome, 'hooks.json'),
+    JSON.stringify({
+      hooks: {
+        Stop: [
+          { hooks: [{ type: 'command', command: `node "${path.join(hooks, 'stop.js')}"` }] },
+          { hooks: [{ type: 'command', command: 'node /somebody/else.js' }] },
+        ],
+      },
+    })
+  );
+  fs.mkdirSync(path.join(codexHome, 'skills', 'plain-speak'), { recursive: true });
+  fs.writeFileSync(path.join(codexHome, 'skills', 'plain-speak', 'SKILL.md'), 'name: plain-speak\n');
+}
 const FUSSY = 'Certainly! We should leverage this and it is important to note the tradeoff.';
 
-test('e2e: install wires both tools and leaves everything else alone', () => {
-  const existing = {
-    hooks: {
-      SessionStart: [{ hooks: [{ type: 'command', command: 'cat ~/.claude/response-rules.md' }] }],
-      PreToolUse: [{ matcher: 'Bash', hooks: [{ type: 'command', command: 'echo mine' }] }],
-    },
-    statusLine: { type: 'command', command: 'bash ~/my-statusline.sh' },
-    enabledPlugins: { 'someone-else@x': true },
-    permissions: { defaultMode: 'auto' },
-  };
-  const { env, claudeDir, codexHome } = sandbox({ settings: existing });
-  const out = run(env, 'install');
-
-  assert.match(out, /hooks \+ badge wired/);
-  assert.match(out, /nothing else in your settings was changed/);
-  assert.match(out, /Codex mode: normal\. Change it in a session: plain speak cte/);
-  assert.doesNotMatch(out, /Codex mode:.*\/plain-speak/);
-
-  const after = readJson(path.join(claudeDir, 'settings.json'));
-
-  // Ours are present on all three events.
-  for (const event of ['SessionStart', 'UserPromptSubmit', 'Stop']) {
-    const wired = after.hooks[event].some((g) =>
-      g.hooks.some((h) => h.command.includes('plain-speak'))
-    );
-    assert.ok(wired, `${event} not wired`);
-  }
-
-  // Theirs survive untouched — including the response-rules hook we no longer remove.
-  assert.deepEqual(after.hooks.PreToolUse, existing.hooks.PreToolUse);
-  assert.ok(
-    after.hooks.SessionStart.some((g) =>
-      g.hooks.some((h) => h.command.includes('response-rules.md'))
-    ),
-    'a pre-existing hook must not be removed'
-  );
-  assert.deepEqual(after.statusLine, existing.statusLine, 'statusline must not be touched');
-  assert.deepEqual(after.enabledPlugins, existing.enabledPlugins);
-  assert.deepEqual(after.permissions, existing.permissions);
-
-  // Commands, runtime and Codex.
-  assert.ok(fs.existsSync(path.join(claudeDir, 'skills', 'plain-speak', 'SKILL.md')));
-  assert.ok(fs.existsSync(path.join(claudeDir, 'skills', 'plain-speak-stats', 'SKILL.md')));
-  assert.ok(fs.existsSync(path.join(claudeDir, 'plain-speak', 'bin', 'cli.js')));
-  assert.ok(fs.existsSync(path.join(codexHome, 'plain-speak', 'bin', 'cli.js')));
-  const codexHooks = readJson(path.join(codexHome, 'hooks.json'));
-  assert.equal(Object.keys(codexHooks.hooks).length, 3);
-  for (const groups of Object.values(codexHooks.hooks)) {
-    assert.ok(
-      groups.flatMap((g) => g.hooks).every((h) => h.command.startsWith('PLAIN_SPEAK_TARGET=codex ')),
-      'Codex hooks must select Codex state'
-    );
-  }
-  assert.match(fs.readFileSync(path.join(codexHome, 'config.toml'), 'utf8'), /hooks = true/);
-  assert.match(out, /skills: \$plain-speak \$plain-speak-stats/);
-
-  // A frontmatter name must match its directory or the command never loads.
-  const skill = fs.readFileSync(path.join(claudeDir, 'skills', 'plain-speak', 'SKILL.md'), 'utf8');
-  assert.match(skill, /^name: plain-speak$/m);
-
-  assert.match(run(env, 'doctor'), /ok {3}SessionStart/);
-});
-
-test('e2e: with the plugin enabled, the installer leaves the commands to it', () => {
-  const { env, claudeDir } = sandbox({
-    settings: { enabledPlugins: { 'plain-speak@plain-speak': true } },
-  });
-  // An older npx install left these behind. Upgrading has to clear them, or the user
-  // sees both /plain-speak and /plain-speak:init in the picker.
-  const stale = path.join(claudeDir, 'skills', 'plain-speak');
-  fs.mkdirSync(stale, { recursive: true });
-  fs.writeFileSync(path.join(stale, 'SKILL.md'), 'stale\n');
-
-  const out = run(env, 'install', '--claude');
-
-  assert.match(out, /from the plugin/);
-  assert.ok(!fs.existsSync(stale), 'the stale user-level copy must be removed');
-  // Hooks still get wired — only the commands are the plugin's job.
-  assert.ok(readJson(path.join(claudeDir, 'settings.json')).hooks.Stop.length > 0);
-  assert.match(run(env, 'status'), /switch: \/plain-speak:init/);
-  assert.match(run(env, 'doctor'), /ok {3}\/plain-speak:init/);
-});
-
-test('e2e: explicit Claude install ignores a Codex target environment', () => {
-  const { env, claudeDir, codexHome } = sandbox();
-  run({ ...env, PLAIN_SPEAK_TARGET: 'codex' }, 'install', '--claude');
-
-  assert.ok(fs.existsSync(path.join(claudeDir, 'plain-speak', 'bin', 'cli.js')));
-  assert.ok(!fs.existsSync(path.join(codexHome, 'plain-speak', 'bin', 'cli.js')));
-  assert.ok(
-    readJson(path.join(claudeDir, 'settings.json')).hooks.SessionStart[0].hooks[0].command.includes(
-      path.join(claudeDir, 'plain-speak')
-    )
-  );
-});
-
-test('e2e: a disabled plugin provides nothing, so the commands are installed', () => {
-  const { env, claudeDir } = sandbox({
-    settings: { enabledPlugins: { 'plain-speak@plain-speak': false } },
-  });
-  run(env, 'install', '--claude');
-  assert.ok(fs.existsSync(path.join(claudeDir, 'skills', 'plain-speak', 'SKILL.md')));
-});
 
 test('e2e: status re-arms the rules, and says nothing when the mode is off', () => {
   const { env } = sandbox();
@@ -165,25 +104,73 @@ test('e2e: status re-arms the rules, and says nothing when the mode is off', () 
   assert.doesNotMatch(off, /RULES/, 'off means nothing to re-arm');
 });
 
-test('e2e: --statusline chains, and a second install does not duplicate', () => {
-  const { env, claudeDir } = sandbox({
-    settings: { statusLine: { type: 'command', command: 'bash ~/mine.sh' } },
+test('e2e: the mode command clears an older standalone install and leaves the rest alone', () => {
+  const { env, claudeDir } = sandbox();
+  const before = legacyClaude(claudeDir, {
+    hooks: {
+      SessionStart: [{ hooks: [{ type: 'command', command: 'cat ~/.claude/response-rules.md' }] }],
+      PreToolUse: [{ matcher: 'Bash', hooks: [{ type: 'command', command: 'echo mine' }] }],
+    },
+    statusLine: { type: 'command', command: 'bash ~/mine.sh' },
+    enabledPlugins: { 'someone-else@x': true },
+    permissions: { defaultMode: 'auto' },
   });
-  run(env, 'install', '--claude', '--statusline');
-  const chained = readJson(path.join(claudeDir, 'settings.json')).statusLine.command;
-  assert.match(chained, /plain-speak-statusline\.sh.*bash ~\/mine\.sh/);
 
-  run(env, 'install', '--claude', '--statusline');
+  const out = run(env, 'status');
+  assert.match(out, /removed 3 superseded hook entries/);
+  assert.match(out, /badge added to the front of your statusline/);
+  assert.match(out, /removed duplicate \/plain-speak \/plain-speak-stats/);
+
   const after = readJson(path.join(claudeDir, 'settings.json'));
-  const count = after.hooks.Stop.flatMap((g) => g.hooks).filter((h) =>
-    h.command.includes('plain-speak')
-  ).length;
-  assert.equal(count, 1, 'reinstalling must not stack hooks');
-  assert.equal(
-    (after.statusLine.command.match(/plain-speak-statusline\.sh/g) || []).length,
-    1,
-    'reinstalling must not stack the badge'
+  // Ours are gone from all three events — the plugin carries them now.
+  for (const event of ['SessionStart', 'UserPromptSubmit', 'Stop']) {
+    const ours = (after.hooks[event] || []).flatMap((g) => g.hooks).filter((h) => h.command.includes('plain-speak'));
+    assert.equal(ours.length, 0, `${event} still carries a standalone hook`);
+  }
+  // Theirs survive, including the one sharing an event with ours.
+  assert.deepEqual(after.hooks.PreToolUse, before.hooks.PreToolUse);
+  assert.ok(
+    after.hooks.SessionStart.some((g) => g.hooks.some((h) => h.command.includes('response-rules.md'))),
+    'a pre-existing hook must not be removed'
   );
+  assert.deepEqual(after.enabledPlugins, before.enabledPlugins);
+  assert.deepEqual(after.permissions, before.permissions);
+  // The badge goes in front of their statusline, never instead of it.
+  assert.match(after.statusLine.command, /plain-speak-statusline\.sh.*bash ~\/mine\.sh/);
+  assert.ok(!fs.existsSync(path.join(claudeDir, 'skills', 'plain-speak')));
+});
+
+test('e2e: tidy is idempotent — a clean machine is silent and the badge never stacks', () => {
+  const { env, claudeDir } = sandbox();
+  const first = run(env, 'status');
+  assert.match(first, /badge installed as your statusline/);
+
+  const second = run(env, 'status');
+  assert.doesNotMatch(second, /plain-speak: /, 'a machine that is already right says nothing');
+
+  const command = readJson(path.join(claudeDir, 'settings.json')).statusLine.command;
+  assert.equal((command.match(/plain-speak-statusline\.sh/g) || []).length, 1, 'the badge must not stack');
+});
+
+test('e2e: under Codex, tidy clears its own wiring and switches hooks on', () => {
+  const { env, claudeDir, codexHome } = sandbox();
+  legacyCodex(codexHome);
+  const codexEnv = { ...env, PLAIN_SPEAK_TARGET: 'codex' };
+
+  const out = run(codexEnv, 'status');
+  assert.match(out, /removed 1 superseded hook entry/);
+  assert.match(out, /enabled \[features\] hooks = true/);
+  assert.match(out, /removed duplicate \$plain-speak/);
+
+  const hooks = readJson(path.join(codexHome, 'hooks.json')).hooks;
+  const left = Object.values(hooks).flatMap((groups) => groups.flatMap((g) => g.hooks));
+  assert.equal(left.length, 1, 'only the unrelated hook survives');
+  assert.match(left[0].command, /somebody\/else/);
+  assert.match(fs.readFileSync(path.join(codexHome, 'config.toml'), 'utf8'), /hooks = true/);
+  // No badge for Codex, and the Claude side is not touched from a Codex session.
+  assert.ok(!fs.existsSync(path.join(claudeDir, 'settings.json')));
+
+  assert.doesNotMatch(run(codexEnv, 'status'), /plain-speak: /, 'second run must be silent');
 });
 
 test('e2e: a whole session — inject once, stay silent, correct on drift, then ease off', () => {
@@ -425,9 +412,14 @@ test('e2e: uninstall puts the sandbox back, and --purge clears the data', () => 
     hooks: { PreToolUse: [{ matcher: 'Bash', hooks: [{ type: 'command', command: 'echo mine' }] }] },
     statusLine: { type: 'command', command: 'bash ~/mine.sh' },
   };
-  const { env, claudeDir, codexHome } = sandbox({ settings: existing });
-
-  run(env, 'install', '--statusline');
+  const { env, claudeDir, codexHome } = sandbox();
+  legacyClaude(claudeDir, existing);
+  legacyCodex(codexHome);
+  // Give both tools something to keep, so --purge has data to remove.
+  run(env, 'mode', 'cte');
+  run({ ...env, PLAIN_SPEAK_TARGET: 'codex' }, 'mode', 'cte');
+  // The badge is the one thing tidy adds, so uninstall has to take it back out.
+  run(env, 'status');
   run(env, 'uninstall');
 
   const after = readJson(path.join(claudeDir, 'settings.json'));
@@ -447,7 +439,10 @@ test('e2e: uninstall puts the sandbox back, and --purge clears the data', () => 
 
 test('e2e: Codex uninstall cleans skills and runtime without hooks.json', () => {
   const { env, codexHome } = sandbox();
-  run(env, 'install', '--codex');
+  const codexEnv = { ...env, PLAIN_SPEAK_TARGET: 'codex' };
+  legacyCodex(codexHome);
+  run(codexEnv, 'mode', 'cte');
+  fs.mkdirSync(path.join(codexHome, 'plain-speak', 'bin'), { recursive: true });
   fs.rmSync(path.join(codexHome, 'hooks.json'));
 
   run(env, 'uninstall', '--codex');
@@ -457,11 +452,12 @@ test('e2e: Codex uninstall cleans skills and runtime without hooks.json', () => 
   assert.ok(fs.existsSync(path.join(codexHome, 'plain-speak', 'mode')));
 });
 
-test('e2e: install with no Codex present skips it instead of failing', () => {
+test('e2e: with no Codex on the machine, tidy does nothing rather than failing', () => {
   const { env, claudeDir } = sandbox({ codex: false });
-  const out = run(env, 'install');
-  assert.match(out, /Codex: not installed/);
-  assert.ok(fs.existsSync(path.join(claudeDir, 'plain-speak', 'bin', 'cli.js')));
+  const out = run({ ...env, PLAIN_SPEAK_TARGET: 'codex' }, 'status');
+  assert.doesNotMatch(out, /plain-speak: /, 'nothing to tidy when there is no Codex');
+  assert.match(out, /switch: plain speak/);
+  assert.ok(!fs.existsSync(path.join(claudeDir, 'settings.json')), 'and Claude is left alone');
 });
 
 test('e2e: a hook fed garbage still exits 0 and stays silent', () => {
