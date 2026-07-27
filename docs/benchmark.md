@@ -12,8 +12,9 @@ node bench/report.mjs --write                           # table, and feed the st
 Every call is a real API call and costs real money. Start narrow.
 
 **Check your own model before believing the pitch.** Results are strongly model-dependent,
-and so is the better mode: Opus wants `normal`, Sonnet and Haiku want `cte`, and no GPT
-model shows a reliable gain either way. Full table in [RESULTS.md](../RESULTS.md).
+and so is the better mode: Opus, gpt-5.6-sol and gpt-5.6-terra want `normal`; Sonnet,
+Haiku and the other three GPT models want `cte`. Full table in
+[RESULTS.md](../RESULTS.md).
 
 ```sh
 node bench/run.mjs --models <your-model> --repeat 5   # the only figure that counts
@@ -32,9 +33,9 @@ Measured on Haiku, same session:
 | Cache read | 17,536 | 29,916 |
 
 One-shot sessions pay that 12k cache-creation cost every single time, which buries a
-200-token output difference completely. The v1 harness made exactly that mistake,
-which is why the cost column in [`RESULTS.md`](../RESULTS.md) is noise and the
-output-length column is not.
+200-token output difference completely. That is why [`RESULTS.md`](../RESULTS.md) reports
+output length and carries no cost column at all: cache behaviour dominates the bill, and
+Codex reports no price to compare against anyway.
 
 ## Flags
 
@@ -46,8 +47,9 @@ output-length column is not.
 | `--repeat N` | 1 — runs each cell N times and reports the median |
 | `--prompts <file>` | `bench/prompts.txt`, one per line |
 | `--out <dir>` | `bench/results/` |
+| `--reasoning <level>` | off — pins Codex reasoning effort and records it with the result |
+| `--home <dir>` | `~/.plain-speak-bench` — where `--isolated` keeps its own homes |
 | `--dry-run` | show the plan and exit |
-
 | `--isolated` | off — see below |
 
 Benchmark sessions run with the hooks live, because that is exactly what is being
