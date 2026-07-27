@@ -26,43 +26,19 @@ function copyRuntime(target) {
   return dir;
 }
 
-// A plugin install already namespaces commands as /plain-speak:<name>, so the skills
-// are named short — `mode`, `stats`. A standalone install has no namespace, so bare
-// `/mode` and `/stats` would be rude to everything else on the machine: prefix them
-// on the way in, and rewrite the frontmatter name to match the directory.
-const STANDALONE_NAMES = { init: 'plain-speak', stats: 'plain-speak-stats' };
-const standaloneName = (name) => STANDALONE_NAMES[name] || `plain-speak-${name}`;
-
-function copySkills(targetSkillsDir) {
-  const src = path.join(PKG_ROOT, 'skills');
-  const installed = [];
-  for (const name of fs.readdirSync(src)) {
-    const renamed = standaloneName(name);
-    const dest = path.join(targetSkillsDir, renamed);
-    fs.rmSync(dest, { recursive: true, force: true });
-    fs.cpSync(path.join(src, name), dest, { recursive: true });
-
-    const skillFile = path.join(dest, 'SKILL.md');
-    const body = fs.readFileSync(skillFile, 'utf8').replace(
-      new RegExp(`^name: ${name}$`, 'm'),
-      `name: ${renamed}`
-    );
-    fs.writeFileSync(skillFile, body);
-    installed.push(renamed);
-  }
-  return installed;
-}
-
+// Returns what it removed, so a caller that only wants to report real changes can tell
+// the difference between "cleaned two" and "there was nothing there".
 function removeSkills(targetSkillsDir) {
   let names = [];
   try {
     names = fs.readdirSync(targetSkillsDir).filter((n) => n.startsWith('plain-speak'));
   } catch {
-    return;
+    return [];
   }
   for (const name of names) {
     fs.rmSync(path.join(targetSkillsDir, name), { recursive: true, force: true });
   }
+  return names;
 }
 
 // Only ever our own entries. Installing is purely additive: every other hook, every
@@ -92,7 +68,6 @@ module.exports = {
   HOOK_EVENTS,
   runtimeDir,
   copyRuntime,
-  copySkills,
   removeSkills,
   isOurs,
   readJson,

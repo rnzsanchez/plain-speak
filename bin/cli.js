@@ -12,9 +12,7 @@ const { rulesFor } = require('../src/hooks/lib');
 
 const USAGE = `plain-speak — terse-response modes with an active hygiene checker
 
-  plain-speak install [--claude] [--codex]   wire up hooks and skills
-  plain-speak install --statusline           also chain the badge onto your statusline
-  plain-speak uninstall [--claude|--codex]   remove what it added
+  plain-speak uninstall [--claude|--codex]   remove an older standalone install
   plain-speak uninstall --purge              …and delete the mode and stats too
   plain-speak status [mode] [--project]      show status, or switch mode (--project pins this repo)
   plain-speak mode [off|normal|cte]          show or set the mode ("max" = cte)
@@ -31,26 +29,6 @@ function main() {
   const cmd = process.argv[2];
 
   switch (cmd) {
-    case 'install': {
-      const both = !has('--claude') && !has('--codex');
-      if (both || has('--claude')) claude.install({ chainStatusline: has('--statusline') });
-      if (both || has('--codex')) codex.install();
-      if (both || has('--claude')) {
-        if (!state.readSafe(state.modePath('claude'))) state.writeMode('normal', 'claude');
-        const how = claude.hasBareCommands() ? '/plain-speak cte' : '/plain-speak:init cte';
-        const mode = state.readMode(process.cwd(), 'claude');
-        console.log(`\nClaude Code mode: ${mode}. Change it in a session: ${how}`);
-        console.log('Restart Claude Code, or run /hooks once, to load its hooks.');
-      }
-      if ((both || has('--codex')) && fs.existsSync(state.codexDir())) {
-        if (!state.readSafe(state.modePath('codex'))) state.writeMode('normal', 'codex');
-        const mode = state.readMode(process.cwd(), 'codex');
-        console.log(`\nCodex mode: ${mode}. Change it in a session: plain speak cte`);
-        console.log('Restart Codex to load its hooks and skills.');
-      }
-      return;
-    }
-
     case 'uninstall': {
       const both = !has('--claude') && !has('--codex');
       if (both || has('--claude')) claude.uninstall();
@@ -71,6 +49,13 @@ function main() {
     // What the mode skill runs. No argument: turn it on if it was off, then show
     // where things stand. With an argument: switch mode.
     case 'status': {
+      // The plugin cannot wire a statusline or clear what an older standalone install
+      // left behind, so the mode command does it — once, only when something differs,
+      // and only for the tool it is running under.
+      const codexHere =
+        process.env.PLAIN_SPEAK_TARGET === 'codex' || Boolean(process.env.PLUGIN_ROOT);
+      for (const note of codexHere ? codex.tidy() : claude.tidy()) console.log(`plain-speak: ${note}`);
+
       const wanted = process.argv[3] && !process.argv[3].startsWith('--') ? process.argv[3] : null;
       let mode = state.readMode();
       let source = state.modeSource();
@@ -88,9 +73,7 @@ function main() {
         mode = state.writeMode('normal');
         source = state.modeSource();
       }
-      const codexTarget =
-        process.env.PLAIN_SPEAK_TARGET === 'codex' || Boolean(process.env.PLUGIN_ROOT);
-      const cmd = codexTarget
+      const cmd = codexHere
         ? 'plain speak'
         : claude.hasBareCommands()
           ? '/plain-speak'

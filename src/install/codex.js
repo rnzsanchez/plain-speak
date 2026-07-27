@@ -6,8 +6,6 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const {
-  copyRuntime,
-  copySkills,
   removeSkills,
   HOOK_EVENTS,
   isOurs,
@@ -46,35 +44,40 @@ function enableHooksFeature() {
   return true;
 }
 
-function install() {
-  if (!fs.existsSync(codexHome())) {
-    console.log('Codex: not installed (no ~/.codex) — skipped');
-    return;
+// The Codex counterpart of the Claude tidy: clear what an older standalone install left
+// in hooks.json and skills/, and make sure hooks are switched on at all. No badge —
+// Codex builds its own status line and takes no command to render one.
+function tidy() {
+  const notes = [];
+  if (!fs.existsSync(codexHome())) return notes;
+
+  const config = readJson(hooksPath(), null);
+  let stale = 0;
+  if (config && config.hooks) {
+    for (const event of Object.keys(HOOK_EVENTS)) {
+      const groups = config.hooks[event] || [];
+      const ours = groups.flatMap((g) => g.hooks || []).filter((h) => isOurs(h.command)).length;
+      if (!ours) continue;
+      stale += ours;
+      const kept = groups
+        .map((g) => ({ ...g, hooks: (g.hooks || []).filter((h) => !isOurs(h.command)) }))
+        .filter((g) => g.hooks.length > 0);
+      if (kept.length) config.hooks[event] = kept;
+      else delete config.hooks[event];
+    }
+    if (stale) {
+      writeJson(hooksPath(), config);
+      notes.push(`removed ${stale} superseded hook ${stale === 1 ? 'entry' : 'entries'} — the plugin carries them now`);
+    }
   }
-  const dir = copyRuntime('codex');
-  const config = readJson(hooksPath(), {});
-  config.hooks = config.hooks || {};
 
-  for (const [event, script] of Object.entries(HOOK_EVENTS)) {
-    const command = `PLAIN_SPEAK_TARGET=codex node "${path.join(dir, 'src', 'hooks', script)}"`;
-    const kept = (config.hooks[event] || [])
-      .map((g) => ({ ...g, hooks: (g.hooks || []).filter((h) => !isOurs(h.command)) }))
-      .filter((g) => g.hooks.length > 0);
-    config.hooks[event] = [...kept, { hooks: [{ type: 'command', command }] }];
-  }
+  // Without this the plugin's own hooks never run, and nothing says why.
+  if (enableHooksFeature()) notes.push('enabled [features] hooks = true in config.toml');
 
-  writeJson(hooksPath(), config);
-  const flipped = enableHooksFeature();
-  const skillsDir = path.join(codexHome(), 'skills');
-  fs.mkdirSync(skillsDir, { recursive: true });
-  const skills = copySkills(skillsDir);
+  const removed = removeSkills(path.join(codexHome(), 'skills'));
+  if (removed.length) notes.push(`removed duplicate ${removed.map((n) => `$${n}`).join(' ')}`);
 
-  console.log(`Codex: hooks wired at ${hooksPath()}`);
-  console.log(`  skills: ${skills.map((s) => `$${s}`).join(' ')}`);
-  if (flipped) console.log('  enabled [features] hooks = true in config.toml');
-  // Codex asks the user to trust hook sources on first run. Prompting is the
-  // point of that check, so the installer tells you rather than bypassing it.
-  console.log('  first Codex run will ask you to trust these hooks — accept once');
+  return notes;
 }
 
 function uninstall() {
@@ -113,4 +116,4 @@ function doctor() {
 
 const codexRuntimeDir = () => path.join(codexHome(), 'plain-speak');
 
-module.exports = { install, uninstall, doctor };
+module.exports = { tidy, uninstall, doctor };

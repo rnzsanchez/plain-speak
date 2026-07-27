@@ -7,7 +7,6 @@ const path = require('path');
 const state = require('../state');
 const {
   copyRuntime,
-  copySkills,
   removeSkills,
   runtimeDir,
   HOOK_EVENTS,
@@ -19,64 +18,58 @@ const {
 const settingsPath = () => path.join(state.claudeDir(), 'settings.json');
 const skillsDir = () => path.join(state.claudeDir(), 'skills');
 
-function install({ chainStatusline = false } = {}) {
+// Everything the plugin cannot do for itself, done once when the mode command runs:
+// clear the wiring an older standalone install left behind, and put the badge in the
+// statusline. Idempotent — it writes only what differs and returns what it changed, so
+// a machine that is already right says nothing at all.
+//
+// The badge points at the copied runtime rather than the plugin root on purpose: the
+// plugin root carries a version in its path, so a settings.json pointing there breaks
+// on the next update. The copy is at a fixed path and gets refreshed here.
+function tidy() {
+  const notes = [];
   const dir = copyRuntime('claude');
   const settings = readJson(settingsPath(), {});
-  settings.hooks = settings.hooks || {};
+  let changed = false;
 
-  for (const [event, script] of Object.entries(HOOK_EVENTS)) {
-    const command = `node "${path.join(dir, 'src', 'hooks', script)}"`;
-    // Drop only our own entries, so reinstalling never stacks duplicates. Every
-    // other hook on the event is carried through untouched.
-    const kept = (settings.hooks[event] || [])
-      .map((group) => ({
-        ...group,
-        hooks: (group.hooks || []).filter((h) => !isOurs(h.command)),
-      }))
-      .filter((group) => group.hooks.length > 0);
-    settings.hooks[event] = [...kept, { hooks: [{ type: 'command', command }] }];
+  // Hooks come from the plugin now. Entries left by an older standalone install fire
+  // the same three hooks a second time, which injects the rules twice.
+  let stale = 0;
+  for (const event of Object.keys(HOOK_EVENTS)) {
+    const groups = (settings.hooks && settings.hooks[event]) || [];
+    const ours = groups.flatMap((g) => g.hooks || []).filter((h) => isOurs(h.command)).length;
+    if (!ours) continue;
+    stale += ours;
+    const kept = groups
+      .map((g) => ({ ...g, hooks: (g.hooks || []).filter((h) => !isOurs(h.command)) }))
+      .filter((g) => g.hooks.length > 0);
+    if (kept.length) settings.hooks[event] = kept;
+    else delete settings.hooks[event];
+    changed = true;
   }
+  if (stale) notes.push(`removed ${stale} superseded hook ${stale === 1 ? 'entry' : 'entries'} — the plugin carries them now`);
 
-  // Your statusline is yours. If one is already configured we do not touch it —
-  // rearranging someone's status bar is not this installer's business. Pass
-  // --statusline to chain the badge on anyway, or place `badge` wherever your own
-  // statusline wants it.
   const badge = `bash "${path.join(dir, 'src', 'plain-speak-statusline.sh')}"`;
   const existing = settings.statusLine && settings.statusLine.command;
-  let badgeNote;
   if (!existing) {
     settings.statusLine = { type: 'command', command: badge };
-    badgeNote = 'badge installed as your statusline';
-  } else if (existing.includes('plain-speak')) {
-    badgeNote = 'badge already in your statusline';
-  } else if (chainStatusline) {
-    settings.statusLine = { type: 'command', command: `${badge}; ${existing}` };
-    badgeNote = 'badge prepended to your existing statusline';
-  } else {
-    badgeNote = `statusline left alone — add it yourself with: ${badge}`;
+    notes.push('badge installed as your statusline');
+    changed = true;
+  } else if (!existing.includes('plain-speak')) {
+    // Yours stays yours — the badge goes in front of it, never instead of it.
+    settings.statusLine = { ...settings.statusLine, type: 'command', command: `${badge}; ${existing}` };
+    notes.push('badge added to the front of your statusline');
+    changed = true;
   }
 
-  writeJson(settingsPath(), settings);
+  if (changed) writeJson(settingsPath(), settings);
 
-  // The plugin already carries the commands as /plain-speak:init and /plain-speak:stats.
-  // Copying user-level ones on top shows every command twice in the picker, so don't.
-  let commands = '/plain-speak:init /plain-speak:stats (from the plugin)';
-  if (pluginInstalled(settings)) {
-    // An earlier npx install may have left user-level copies behind. Leaving them is
-    // what puts every command in the picker twice, so clear them on the way past.
-    removeSkills(skillsDir());
-  } else {
-    fs.mkdirSync(skillsDir(), { recursive: true });
-    commands = copySkills(skillsDir())
-      .map((s) => `/${s}`)
-      .join(' ');
-  }
+  // The plugin namespaces its own commands, so user-level copies from an older install
+  // put every command in the picker twice.
+  const removed = removeSkills(skillsDir());
+  if (removed.length) notes.push(`removed duplicate ${removed.map((n) => `/${n}`).join(' ')}`);
 
-  console.log(`Claude Code: hooks + badge wired, runtime at ${dir}`);
-  console.log(`  commands: ${commands}`);
-  console.log(`  ${badgeNote}`);
-  console.log(`  settings backed up to ${settingsPath()}.plain-speak-backup`);
-  console.log('  nothing else in your settings was changed');
+  return notes;
 }
 
 function uninstall() {
@@ -142,4 +135,4 @@ const hasBareCommands = () => fs.existsSync(path.join(skillsDir(), 'plain-speak'
 const pluginInstalled = (settings) =>
   Object.entries(settings.enabledPlugins || {}).some(([k, on]) => on && k.startsWith('plain-speak@'));
 
-module.exports = { install, uninstall, doctor, hasBareCommands, pluginInstalled };
+module.exports = { tidy, uninstall, doctor, hasBareCommands, pluginInstalled };
