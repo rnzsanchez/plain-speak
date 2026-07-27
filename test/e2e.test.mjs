@@ -514,3 +514,25 @@ test('e2e: doctor credits the Codex plugin for hooks that hooks.json does not ca
     assert.match(out, new RegExp(`ok   ${event} \\(from the plugin\\)`));
   }
 });
+
+// The copied runtime carries its own bin/cli.js, and the skills fall back to it whenever
+// CLAUDE_PLUGIN_ROOT is unset. Copying deletes the destination first, so a copy whose
+// source and destination are the same directory used to delete its own src/ and leave
+// the runtime gutted.
+test('e2e: the copied runtime does not delete itself when it is the one running', () => {
+  const { env, claudeDir } = sandbox();
+  run(env, 'status');
+
+  const copied = path.join(claudeDir, 'plain-speak');
+  assert.ok(fs.existsSync(path.join(copied, 'src')), 'status should copy a runtime');
+
+  const out = execFileSync('node', [path.join(copied, 'bin', 'cli.js'), 'status'], {
+    encoding: 'utf8',
+    env,
+    cwd: os.tmpdir(),
+  });
+
+  assert.ok(fs.existsSync(path.join(copied, 'src')), 'src must survive the copy onto itself');
+  assert.ok(fs.existsSync(path.join(copied, 'modes')), 'and so must modes');
+  assert.match(out, /RULES/, 'and it still arms the mode');
+});

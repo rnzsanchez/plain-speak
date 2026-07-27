@@ -14,10 +14,26 @@ const HOOK_EVENTS = {
 
 const runtimeDir = (target) => state.homeDir(target);
 
+// A path that does not exist yet has no realpath, so fall back to resolve.
+const realPath = (p) => {
+  try {
+    return fs.realpathSync(p);
+  } catch {
+    return path.resolve(p);
+  }
+};
+
 // `npx plain-speak install` runs from a temp npm cache that can be pruned at any
 // time, so the hooks can't point at it. Copy what they need somewhere stable.
 function copyRuntime(target) {
   const dir = runtimeDir(target);
+  // The copy carries its own bin/cli.js, so this runs with PKG_ROOT already equal to
+  // `dir` whenever that copy is the one executing — which is the fallback path when
+  // CLAUDE_PLUGIN_ROOT is unset. Copying starts by deleting the destination, so without
+  // this guard the runtime deletes its own source and leaves nothing behind.
+  // realpath, not resolve: on macOS a config dir under /var reaches us as /private/var
+  // through __dirname, and the two spellings of one directory compare unequal.
+  if (realPath(PKG_ROOT) === realPath(dir)) return dir;
   for (const sub of ['src', 'modes', 'bin']) {
     fs.rmSync(path.join(dir, sub), { recursive: true, force: true });
     fs.cpSync(path.join(PKG_ROOT, sub), path.join(dir, sub), { recursive: true });
