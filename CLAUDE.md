@@ -125,8 +125,9 @@ Both of these cost a full run of silent zeros before they were found:
 ## Benchmark honesty
 
 Every benchmark session is multi-turn. One-shot sessions make cache-creation
-tokens dominate and hide the output difference — that mistake is why the v1 cost
-numbers in `RESULTS.md` were noise. Don't present cost from a single-turn harness.
+tokens dominate and hide the output difference — an early harness made exactly that
+mistake and its cost figures were noise. Don't present cost from a single-turn harness,
+and don't reintroduce a cost column: Codex reports no price to compare against.
 
 `plain-speak stats` shows a figure only when `src/savings.json` has an entry for that
 model. No data, no number. The saving it prints is the benchmark cut applied to the
