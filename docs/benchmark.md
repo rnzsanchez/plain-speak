@@ -134,3 +134,10 @@ That line reports the benchmark percentage and its provenance. It is deliberatel
 multiplied out into "you saved N tokens": the benchmark measures short question-and-
 answer turns, a real session is mostly tool traffic, and scaling one onto the other
 would invent a number.
+
+Two kinds of cell are measured but never written to `savings.json`. Codex models are
+skipped because the stats command reads a Claude Code transcript and has no way to reach
+a Codex session, so a `gpt-*` entry could never match anything; their numbers live in
+`RESULTS.md` instead. Cells run with a pinned `--reasoning` effort are skipped because a
+controlled experiment is not the setting anyone runs day to day. Neither absence is an
+oversight.

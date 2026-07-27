@@ -73,7 +73,11 @@ for (const [, modes] of byModel) {
     });
     // A pinned reasoning effort is a controlled experiment, not the setting anyone runs
     // day to day, so it must not become the number `plain-speak stats` quotes at them.
-    if (cut != null && !run.reasoningEffort) {
+    // Codex models are skipped for a different reason: savings.json is read by
+    // `plain-speak stats`, which measures a session from a Claude Code transcript and has
+    // no way to reach a Codex one. A gpt-* row there can never match anything — it just
+    // reads as published data. The GPT numbers live in RESULTS.md, where people read them.
+    if (cut != null && !run.reasoningEffort && !model.startsWith('gpt')) {
       savings[model] = savings[model] || {};
       savings[model][mode] = { outputCutPct: Number(cut.toFixed(1)), turns: run.turns };
     }
