@@ -6,7 +6,7 @@ Both sides, measured where measurement was possible.
 
 | Upside | Grounding |
 |---|---|
-| Shorter answers on every model measured | Medians of 5 rounds, 3-turn sessions. Claude: Opus 5 cuts 55% (`normal`); Sonnet 5 42% and Haiku 4.5 21% (`cte`). Codex at pinned `medium` reasoning: gpt-5.5 56% (`cte`), gpt-5.6-sol 39% (`normal`), gpt-5.6-luna 34% (`cte`), gpt-5.6-terra 27% (`normal`), gpt-5.4 17% and gpt-5.4-mini 21% (`cte`). The better mode differs per model and is not guessable. |
+| Historic benchmark results | The published figures predate the current rules. Re-measure before using them for a decision. |
 | The rules keep working | The point of the thing. Injected once, then re-sent only when a reply stops matching the mode — not on every prompt. |
 | Checking costs no tokens | It is a text scan inside a `Stop` hook. No model call, nothing added to context. |
 | Invisible | Verdicts and reinjections reach the model with `suppressOutput`, so nothing lands in your transcript. Asserted in `test/hooks.test.mjs`. |
@@ -23,7 +23,7 @@ Both sides, measured where measurement was possible.
 | Two node starts per turn | Measured on an M-series Mac: `UserPromptSubmit` 79 ms, `Stop` 55 ms. A bare `node -e ''` is **76 ms** on the same machine, so nearly all of it is interpreter startup and plain-speak's own work is single-digit milliseconds. It is still ~135 ms of wall clock per turn. |
 | The badge re-renders as you type | Measured at 27 ms, against 25 ms for `bash -c :`. Builtins only, one small file read, so roughly 2 ms is ours. |
 | The checker is a heuristic | It will sometimes miss a fussy reply and sometimes flag one that needed a long sentence — `cte` more, since it trips on a single hit. Quoting a phrase no longer counts as using it, which removed the biggest false-positive source. |
-| Terser is not always better | A short answer can drop context you wanted. `cte` especially. Use `normal`, or ask for detail and the checker stands down. |
+| Terser is not always better | A short answer can drop context you wanted. `cte` especially. Ask for detail to skip shape checks; tone checks still apply. |
 | On Codex it depends on reasoning effort | The GPT figures hold at pinned `medium`. Codex bills reasoning as output and no response rule governs how long a model thinks, so a different effort is a different measurement. `cte` on gpt-5.6-sol shortens the visible reply 8% while spiking reasoning enough to bill 33% more. Check your own model and effort — `node bench/run.mjs --models <yours> --repeat 5 --reasoning medium`. |
 | Codex asks for trust | Hooks must be trusted on first run. The installer does not bypass that prompt for you. |
 | A benchmark run overrides child sessions | It passes `PLAIN_SPEAK_MODE` only to benchmark children. Your live global mode file stays untouched. |

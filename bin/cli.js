@@ -20,7 +20,7 @@ const USAGE = `plain-speak — terse-response modes with an active hygiene check
   plain-speak stats [--json]                 token and drift report
   plain-speak doctor                         check the install
 
-Modes: off (nothing) · normal (plain voice, the base) · cte (blunt, at twelve)
+Modes: off (nothing) · normal (plain voice, the base) · cte (short, clear, everyday)
 `;
 
 const has = (flag) => process.argv.includes(flag);
@@ -79,22 +79,11 @@ function main() {
           ? '/plain-speak'
           : '/plain-speak:init';
 
-      // Show what the mode sounds like rather than describing it. Verbatim openers from
-      // one real run of the same question through Opus 5, with that reply's own token
-      // count — invented samples would be a claim about the modes that nothing backs.
-      const SAMPLES = {
-        off: ['Redis is an in-memory key-value store. That\'s the whole trick: your…', '1,765 tokens'],
-        normal: ['Redis keeps data in RAM, not on disk. That\'s the whole trick. A…', '1,466 tokens · 17% shorter'],
-        cte: ['Redis = in-memory key-value store. Cache = you put stuff there…', '1,195 tokens · 32% shorter'],
-      };
-
       // Keep the source when it is not the global setting — a project pin that gives no
       // sign of itself is a mystery, and that was a documented promise.
       const from = source === 'global' ? '' : ` (from ${source})`;
       console.log(`plain-speak — ${mode}${mode === 'cte' ? ' 🧠' : ''}${from}\n`);
-      console.log('  "explain to me how redis cache works" — asked for real, Opus 5');
-      console.log(`  → ${SAMPLES[mode][0]}`);
-      console.log(`    ${SAMPLES[mode][1]}\n`);
+      console.log('  Benchmarks are being refreshed for these rules.\n');
       console.log(`  switch: ${cmd} off | normal | cte    (--project pins this repo)`);
 
       // A skill's stdout is tool output, so printing the ruleset puts it back in context.

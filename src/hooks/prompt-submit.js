@@ -18,21 +18,30 @@ run(({ sessionId, prompt, cwd }) => {
 
   const match = prompt.match(SWITCH);
   if (match) {
-    const mode = state.writeMode(match[1]);
+    const saved = state.writeMode(match[1]);
+    const mode = state.readMode(cwd);
+    const message =
+      saved === mode
+        ? `plain-speak: ${mode}`
+        : `plain-speak: ${saved} saved; ${mode} active (${state.modeSource(cwd)})`;
     state.saveSession(sessionId, { ...session, mode, drift: false, reason: null }, store);
-    if (mode === 'off') return notify('UserPromptSubmit', 'plain-speak: off');
+    if (mode === 'off') return notify('UserPromptSubmit', message);
+    const rules = rulesFor(mode);
+    if (!rules) return notify('UserPromptSubmit', message);
     return notify(
       'UserPromptSubmit',
-      `plain-speak: ${mode}`,
-      `PLAIN-SPEAK MODE: ${mode}\n\n${rulesFor(mode)}`
+      message,
+      `PLAIN-SPEAK MODE: ${mode}\n\n${rules}`
     );
   }
 
   const mode = state.readMode(cwd);
   if (mode === 'off') return;
+  const rules = rulesFor(mode);
+  if (!rules) return;
 
-  // Remembered for the Stop hook, which never sees the prompt. Only the boolean
-  // is stored, never the prompt text.
+  // Remembered for the Stop hook, which never sees the prompt. It skips shape
+  // checks for long requests, while still checking tone. Only the boolean is stored.
   const next = { ...session, mode, lengthRequested: LENGTH_REQUESTED.test(prompt) };
 
   if (!state.shouldReinject(session)) {
@@ -57,10 +66,12 @@ run(({ sessionId, prompt, cwd }) => {
   // repeating it more softly is the wrong move. Say so plainly, then restate the rules.
   const streak = session.streak || 0;
   const body = state.escalating(session)
-    ? `You have now drifted ${streak} turns running. The rules below are not a suggestion — follow them in this reply, starting with the first sentence.\n\n${rulesFor(mode)}`
+    ? `You have now drifted ${streak} turns running. Return to these rules where the task allows.\n\n${rules}`
     : state.easedOff(session)
-      ? `PLAIN-SPEAK reminder (${mode}): answer first, plain words, no filler, no wall of prose.`
-      : rulesFor(mode);
+      ? mode === 'cte'
+        ? 'CTE reminder: lead with answer. Plain everyday words. No filler. Eight words max per prose sentence. No prose walls.'
+        : `PLAIN-SPEAK reminder (${mode}): answer first, plain words, no filler, no wall of prose.`
+      : rules;
 
   inject(
     'UserPromptSubmit',

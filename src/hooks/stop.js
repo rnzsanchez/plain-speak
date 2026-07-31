@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 'use strict';
-// Stop — the hygiene check. Reads the reply that just finished, scores it, and
+// Stop — the hygiene check. Reads the reply that just finished, scores tone and shape, and
 // records the verdict. Emits nothing and never blocks: making the model spend a
 // whole extra turn being told "be shorter" would cost more than the drift did.
 
@@ -27,4 +27,4 @@ run(({ sessionId, reply, permissionMode, cwd }) => {
   next.lengthRequested = false;
   state.bumpLifetime(store, { turns: 1, trips: verdict.drift ? 1 : 0 });
   state.saveSession(sessionId, next, store);
-});
+}, { emptyJsonOnCodex: true });

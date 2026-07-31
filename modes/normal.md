@@ -18,6 +18,8 @@
 3. No jargon.
 4. No buzzwords.
 5. No filler.
+6. Do not invent terms.
+7. Explain needed technical words.
 
 ## Voice
 1. Sound like a person, not a product.

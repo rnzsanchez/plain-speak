@@ -98,7 +98,7 @@ test('e2e: status re-arms the rules, and says nothing when the mode is off', () 
   const armed = run(env, 'status', 'cte');
   assert.match(armed, /RULES/);
   assert.match(armed, /PLAIN-SPEAK MODE: cte/);
-  assert.match(armed, /Head took hits/, "the mode's own rule text has to be in there");
+  assert.match(armed, /Answer every requested part/, "the mode's own rule text has to be in there");
 
   const off = run(env, 'status', 'off');
   assert.doesNotMatch(off, /RULES/, 'off means nothing to re-arm');
@@ -242,7 +242,7 @@ test('e2e: a whole session — inject once, stay silent, correct on drift, then 
     if (/turns running/.test(body)) escalated = body;
   }
   assert.ok(escalated, 'it must still correct after many drifts — there is no cap');
-  assert.match(escalated, /not a suggestion/, 'consecutive drift gets a firmer correction');
+  assert.match(escalated, /Return to these rules/, 'consecutive drift gets a firmer correction');
   assert.match(escalated, /Response Rules/, 'and the whole ruleset, not the short nudge');
 });
 
@@ -266,12 +266,11 @@ test('e2e: occasional drift past the threshold still eases off to a short nudge'
   assert.doesNotMatch(easedBody, /Talk|Shape/, 'eased-off corrections send the short nudge');
 });
 
-test('e2e: exemptions and quoting keep it quiet', () => {
+test('e2e: long requests skip shape checks, while plan mode and quoting stay quiet', () => {
   const { env } = sandbox();
   run(env, 'mode', 'cte');
 
   const cases = [
-    ['length requested', { user_prompt: 'explain in detail how TCP works' }, FUSSY],
     ['plan mode', { permission_mode: 'plan' }, FUSSY],
     ['quoting a marker', {}, 'Catches `leverage` and `utilize`.\n\n> Certainly! Happy to help.'],
   ];
@@ -286,6 +285,14 @@ test('e2e: exemptions and quoting keep it quiet', () => {
       `${name} must not trigger a correction`
     );
   }
+
+  hook(env, 'prompt-submit.js', { session_id: 'detail', user_prompt: 'explain in detail how TCP works' });
+  hook(env, 'stop.js', { session_id: 'detail', last_assistant_message: FUSSY });
+  assert.match(
+    hook(env, 'prompt-submit.js', { session_id: 'detail', user_prompt: 'next' }),
+    /last reply drifted/,
+    'a long request still corrects bad tone'
+  );
 });
 
 test('e2e: mode precedence — env beats project, project beats global', () => {
@@ -411,7 +418,7 @@ test('e2e: stats reports the real session, never a benchmark one', () => {
   assert.match(run(env, 'stats'), /stayed short/);
 });
 
-test('e2e: the savings figure counts prose only, and nets off what the rules cost', () => {
+test('e2e: unmeasured rules show no savings figure', () => {
   const { env } = sandbox();
   run(env, 'mode', 'normal');
 
@@ -451,8 +458,8 @@ test('e2e: the savings figure counts prose only, and nets off what the rules cos
   );
   assert.equal(r.session.transcript.outputTokens, 1000, 'usage is counted once per message');
   assert.ok(r.session.transcript.proseTokens < 400, 'the tool call is not prose');
-  assert.ok(r.session.saved < r.session.transcript.outputTokens, 'never scaled across tool traffic');
-  assert.equal(r.session.net, r.session.saved - r.session.spent);
+  assert.equal(r.session.saved, null);
+  assert.equal(r.session.net, null);
 });
 
 test('e2e: uninstall puts the sandbox back, and --purge clears the data', () => {

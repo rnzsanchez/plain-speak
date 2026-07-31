@@ -11,6 +11,9 @@ node bench/report.mjs --write                           # table, and feed the st
 
 Every call is a real API call and costs real money. Start narrow.
 
+> **Current rules are unmeasured.** The published results predate the CTE and normal
+> prompt rewrite. Run a fresh benchmark before using any figure below.
+
 **Check your own model before believing the pitch.** Results are strongly model-dependent,
 and so is the better mode: Opus, gpt-5.6-sol and gpt-5.6-terra want `normal`; Sonnet,
 Haiku and the other three GPT models want `cte`. Full table in

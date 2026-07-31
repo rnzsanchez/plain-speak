@@ -12,11 +12,12 @@ run(({ sessionId, cwd }) => {
 
   const mode = state.readMode(cwd);
   if (mode === 'off') return;
+  const rules = rulesFor(mode);
+  if (!rules) return;
 
   const store = state.readStore();
   const session = state.readSession(sessionId, store);
   state.saveSession(sessionId, { ...session, mode }, store);
 
-  const rules = rulesFor(mode);
-  if (rules) inject('SessionStart', `PLAIN-SPEAK MODE: ${mode}\n\n${rules}`);
+  inject('SessionStart', `PLAIN-SPEAK MODE: ${mode}\n\n${rules}`);
 });

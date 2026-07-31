@@ -45,7 +45,8 @@ on Codex.
 - **Only ever touch our own entries.** `isOurs()` matches commands containing
   `plain-speak`; nothing else is filtered out of a user's settings, ever. `tidy()`
   removes plain-speak's own superseded wiring and nothing besides.
-- **The `Stop` hook must never block or print.** Making the model spend a turn
+- **The `Stop` hook must never block or print model-visible text.** Codex requires a
+  valid JSON response, so its Stop hook emits only `{}`. Making the model spend a turn
   being told to be shorter costs more than the drift did.
 - **Hooks must always exit 0.** `lib.run()` swallows everything for that reason.
   A throwing hook breaks someone's session.

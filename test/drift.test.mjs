@@ -46,15 +46,19 @@ test('mode off never trips', () => {
   assert.equal(check({ reply: FUSSY, mode: 'off' }).exempt, 'mode-off');
 });
 
-test('exemption: user asked for detail', () => {
-  const r = check({ reply: FUSSY, mode: 'cte', prompt: 'explain in detail how this works' });
+test('exemption: user asked for detail skips shape checks', () => {
+  const r = check({
+    reply: 'The migration runs in three phases and each one writes a checkpoint.',
+    mode: 'cte',
+    prompt: 'explain in detail how this works',
+  });
   assert.equal(r.drift, false);
   assert.equal(r.exempt, 'length-requested');
 });
 
-test('exemption: lengthRequested passed through from the prompt hook', () => {
+test('exemption: lengthRequested still catches bad tone', () => {
   const r = check({ reply: FUSSY, mode: 'cte', lengthRequested: true });
-  assert.equal(r.exempt, 'length-requested');
+  assert.equal(r.drift, true);
 });
 
 test('exemption: plan mode', () => {
@@ -71,6 +75,23 @@ test('tables and lists are not prose paragraphs', () => {
     '\n'
   );
   assert.equal(check({ reply, mode: 'cte' }).drift, false);
+});
+
+test('cte shape boundaries match its rules', () => {
+  assert.equal(check({ reply: 'One two three four five six seven eight.', mode: 'cte' }).drift, false);
+  assert.equal(
+    check({ reply: 'One two three four five six seven eight nine.', mode: 'cte' }).drift,
+    true
+  );
+
+  const wall = [
+    'Alpha beta gamma delta epsilon zeta eta.',
+    'Theta iota kappa lambda mu nu xi.',
+    'Omicron pi rho sigma tau upsilon phi.',
+    'Chi psi omega red blue green black.',
+  ].join(' ');
+  assert.equal(check({ reply: wall, mode: 'cte' }).drift, false);
+  assert.equal(check({ reply: `${wall}\n\n${wall}`, mode: 'cte' }).drift, true);
 });
 
 test('naming a marker phrase is not using it', () => {

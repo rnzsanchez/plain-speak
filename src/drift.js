@@ -2,15 +2,15 @@
 // Deterministic hygiene check: did the last reply still sound like the mode?
 // No LLM call. Pure functions, so all of it is unit-testable.
 //
-// What this polices is TONE, not length. A long, complete thought is fine —
-// fussy, pretentious, robotic phrasing is not. Nothing here is a rule the model
-// must obey; crossing the threshold is only the signal that it drifted.
+// What this polices is tone and shape, not total reply length. A long, complete
+// thought is fine — fussy, pretentious, robotic phrasing is not. Nothing here is
+// a rule the model must obey; crossing the threshold only signals drift.
 
 // Score-based: each hit is one point, and the mode's threshold decides when
 // enough points mean drift.
 //   normal — the base voice. Full thoughts welcome, so this is tone-led and one
 //            stray word never trips it.
-//   cte    — blunt, dialled to twelve. Any single hit is drift.
+//   cte    — compressed and clear. Any single hit is drift.
 const THRESHOLDS = {
   normal: { points: 3, sentenceWords: 30, walls: 3 },
   cte: { points: 1, sentenceWords: 8, walls: 1 },
@@ -139,9 +139,7 @@ function check({
   const threshold = THRESHOLDS[mode];
   if (!threshold) return { ...clean, exempt: 'mode-off' };
   if (permissionMode === 'plan') return { ...clean, exempt: 'plan-mode' };
-  if (lengthRequested || LENGTH_REQUESTED.test(prompt)) {
-    return { ...clean, exempt: 'length-requested' };
-  }
+  const longRequested = lengthRequested || LENGTH_REQUESTED.test(prompt);
 
   const { code, prose } = splitFences(reply);
   if (reply.length > 0 && code.length / reply.length > 0.5) {
@@ -156,24 +154,26 @@ function check({
     }
   }
 
-  const proseBlocks = blocks(prose).filter(isProse);
-  // Only walls count. "Done." is a prose block too, and a mode that flagged it
-  // would fire on every correct short answer.
-  const walls = proseBlocks.filter((b) => sentences(b).length >= 2 && words(b).length >= 25);
-  if (walls.length > threshold.walls) {
-    hits.push(`${walls.length} paragraphs of prose (threshold ${threshold.walls})`);
-  }
+  if (!longRequested) {
+    const proseBlocks = blocks(prose).filter(isProse);
+    // Only walls count. "Done." is a prose block too, and a mode that flagged it
+    // would fire on every correct short answer.
+    const walls = proseBlocks.filter((b) => sentences(b).length >= 2 && words(b).length >= 25);
+    if (walls.length > threshold.walls) {
+      hits.push(`${walls.length} paragraphs of prose (threshold ${threshold.walls})`);
+    }
 
-  const longest = proseBlocks
-    .flatMap(sentences)
-    .map((s) => words(s).length)
-    .reduce((a, b) => Math.max(a, b), 0);
-  if (longest > threshold.sentenceWords) {
-    hits.push(`a ${longest}-word sentence (threshold ${threshold.sentenceWords})`);
+    const longest = proseBlocks
+      .flatMap(sentences)
+      .map((s) => words(s).length)
+      .reduce((a, b) => Math.max(a, b), 0);
+    if (longest > threshold.sentenceWords) {
+      hits.push(`a ${longest}-word sentence (threshold ${threshold.sentenceWords})`);
+    }
   }
 
   if (hits.length < threshold.points) {
-    return { ...clean, exempt: null, points: hits.length };
+    return { ...clean, exempt: longRequested ? 'length-requested' : null, points: hits.length };
   }
   return {
     drift: true,

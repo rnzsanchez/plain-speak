@@ -27,7 +27,10 @@ function readInput() {
 
 function normalize(data) {
   return {
-    sessionId: data.session_id || 'unknown',
+    sessionId:
+      typeof data.session_id === 'string' && /^[A-Za-z0-9._-]+$/.test(data.session_id)
+        ? data.session_id
+        : null,
     prompt: data.user_prompt || data.prompt || '',
     reply: data.last_assistant_message || '',
     permissionMode: data.permission_mode || '',
@@ -70,14 +73,20 @@ function notify(hookEventName, message, context) {
 // A hook that throws is a hook that breaks someone's session, so everything is wrapped
 // and every path exits 0. Silence makes bugs invisible, though — PLAIN_SPEAK_DEBUG=1
 // puts the error on stderr, which the harness shows in its debug log.
-function run(fn) {
+function run(fn, { emptyJsonOnCodex = false } = {}) {
   try {
     const data = readInput();
-    if (data && typeof data === 'object') fn(normalize(data));
+    const input = data && typeof data === 'object' ? normalize(data) : null;
+    if (input && input.sessionId) fn(input);
   } catch (err) {
     if (process.env.PLAIN_SPEAK_DEBUG === '1') {
       process.stderr.write(`plain-speak hook failed: ${err && err.stack ? err.stack : err}\n`);
     }
+  }
+  // Codex Stop rejects an empty stdout stream, while Claude's Stop hook wants no
+  // visible output. `{}` is the smallest valid Codex response and changes nothing.
+  if (emptyJsonOnCodex && (process.env.PLAIN_SPEAK_TARGET === 'codex' || process.env.PLUGIN_ROOT)) {
+    process.stdout.write('{}');
   }
   process.exit(0);
 }

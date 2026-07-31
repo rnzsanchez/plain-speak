@@ -29,6 +29,10 @@ test('injection is hidden from the user and carries the rules to the model', () 
   assert.equal(json.suppressOutput, true, 'must not appear in the transcript');
   assert.equal(json.hookSpecificOutput.hookEventName, 'SessionStart');
   assert.match(json.hookSpecificOutput.additionalContext, /CTE Mode/);
+  assert.match(json.hookSpecificOutput.additionalContext, /Answer every requested part/);
+  assert.match(json.hookSpecificOutput.additionalContext, /Data-loss details/);
+  assert.match(json.hookSpecificOutput.additionalContext, /Do not invent terms/);
+  assert.match(json.hookSpecificOutput.additionalContext, /Clipped fragments/);
 });
 
 test('an ordinary prompt produces no output at all', () => {
@@ -52,12 +56,38 @@ test('the Stop hook itself never emits anything', () => {
   assert.equal(hook('stop.js', { session_id: 's', last_assistant_message: FUSSY }, env), '');
 });
 
+test('the Codex Stop hook emits valid empty JSON', () => {
+  const env = { ...sandbox(), PLAIN_SPEAK_TARGET: 'codex' };
+  assert.equal(hook('stop.js', { session_id: 's', last_assistant_message: FUSSY }, env), '{}');
+});
+
 test('a mode switch is the one thing the user sees', () => {
   const env = sandbox();
   const out = hook('prompt-submit.js', { session_id: 's', user_prompt: 'plain-speak normal' }, env);
   const json = JSON.parse(out);
   assert.equal(json.systemMessage, 'plain-speak: normal');
   assert.equal(fs.readFileSync(path.join(env.CLAUDE_CONFIG_DIR, 'plain-speak', 'mode'), 'utf8'), 'normal');
+});
+
+test('default switches to normal', () => {
+  const env = sandbox();
+  const out = hook('prompt-submit.js', { session_id: 's', user_prompt: 'plain-speak default' }, env);
+  assert.equal(JSON.parse(out).systemMessage, 'plain-speak: normal');
+});
+
+test('a switch reports the effective mode', () => {
+  const env = { ...sandbox(), PLAIN_SPEAK_MODE: 'normal' };
+  const out = hook('prompt-submit.js', { session_id: 's', user_prompt: 'plain-speak cte' }, env);
+  const json = JSON.parse(out);
+  assert.match(json.systemMessage, /cte saved; normal active \(PLAIN_SPEAK_MODE\)/);
+  assert.match(json.hookSpecificOutput.additionalContext, /Response Rules/);
+});
+
+test('missing session ids do not create shared state', () => {
+  const env = sandbox();
+  assert.equal(hook('stop.js', { last_assistant_message: FUSSY }, env), '');
+  assert.equal(hook('stop.js', { session_id: '../../shared', last_assistant_message: FUSSY }, env), '');
+  assert.ok(!fs.existsSync(path.join(env.CLAUDE_CONFIG_DIR, 'plain-speak', 'state.json')));
 });
 
 test('mentioning a mode does not switch it', () => {

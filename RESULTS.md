@@ -1,5 +1,8 @@
 # Results
 
+> **Historical results:** these measurements predate the current CTE and normal rules.
+> Do not use them to estimate current savings. Re-run the benchmark first.
+
 Output tokens per turn, and the cut against the same model with rules off. Every cell is
 the **median of 5 rounds**, each round a fresh three-turn session. Negative means the
 replies got **longer** with the rules on.

@@ -10,7 +10,7 @@ const path = require('path');
 const os = require('os');
 
 const MODES = ['off', 'normal', 'cte'];
-const ALIASES = { max: 'cte', on: 'normal' };
+const ALIASES = { default: 'normal', max: 'cte', on: 'normal' };
 // No cap: one that runs out stops correcting a model that is still drifting. Instead
 // there is a threshold. Under it, correct on the next turn. Over it, back right off —
 // wait several turns and send a one-line nudge instead of the whole ruleset. Repeated

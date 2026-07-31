@@ -1,16 +1,17 @@
 # The checker
 
-Runs on every reply, in the `Stop` hook. No model call, no tokens, no output. You
-never see it. It scores the reply, records a verdict, and stops.
+Runs on every reply, in the `Stop` hook. No model call, no tokens, no visible output.
+Codex receives `{}` because its Stop schema requires valid JSON. It scores the reply,
+records a verdict, and stops.
 
 It never blocks the turn. Making the model spend a whole extra turn being told to
 be shorter would cost more than the drift did.
 
 ```mermaid
 flowchart TD
-    R["the reply"] --> E{"exempt?<br/>asked for detail · mostly code · plan mode"}
+    R["the reply"] --> E{"exempt?<br/>mostly code · plan mode"}
     E -->|"yes"| Q["no verdict, nothing recorded"]
-    E -->|"no"| S["score it — one point per tone hit"]
+    E -->|"no"| S["score it — one point per signal hit"]
     S --> T{"points ≥ the mode's threshold?"}
     T -->|"no"| C["clean · next prompt carries nothing"]
     T -->|"yes"| D["drift · next prompt carries the rules"]
@@ -23,7 +24,7 @@ flowchart TD
 
 ## What it scores
 
-Tone, not length. A long, complete answer is fine. A fussy one is not.
+Tone and shape, not total reply length. A long, complete answer is fine. A fussy one is not.
 
 Each hit is one point. The mode's threshold decides when the points mean drift, so
 a single stray word never trips `normal`.
@@ -56,11 +57,13 @@ as short as "Done."
 
 ## When it stands down
 
-Checked before anything else. Any hit means no verdict at all.
+Code-heavy replies and plan mode stand down before any scoring. A request for detail
+skips only sentence and prose-wall signals; filler, corporate language and robot
+register still count.
 
 | Exemption | Trigger |
 |---|---|
-| `length-requested` | The prompt asked for detail, a walkthrough, a plan, a doc, a spec, or *why* |
+| `length-requested` | The prompt asked for detail, so sentence and prose-wall signals are skipped |
 | `code-heavy` | More than half the reply is inside fenced code blocks |
 | `plan-mode` | The turn ran in plan mode |
 | `mode-off` | Mode is `off` |

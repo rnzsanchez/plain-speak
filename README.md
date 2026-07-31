@@ -26,6 +26,9 @@ not the goal — a reply you have to read twice is expensive at any token count.
 
 One question, asked three times for real: **"explain to me how redis cache works"**.
 
+> **Historical samples and results:** the prompt rules have since changed. The examples
+> and figures below do not measure the current modes; benchmarks are being refreshed.
+
 > Provenance: Claude Code, model `claude-opus-5`, one fresh single-turn session per mode,
 > 25 July 2026, via `claude -p "explain to me how redis cache works" --model claude-opus-5`.
 > Opening lines are the model's own words, with its `##` headings flattened to bold so
@@ -43,7 +46,7 @@ cte      ███████████████████████�
 |---|---|---|
 | `off` | untouched — whatever the model does by default | you want nothing between you and the model |
 | `normal` | plain, answer first, full thoughts welcome, zero fuss | most of the time |
-| `cte` 🧠 | short, blunt, fragments, no paragraphs | you know the topic and want the facts |
+| `cte` 🧠 | short, clear, everyday language; no prose walls | you know the topic and want the facts |
 
 ### `off` · `1,765 tokens`
 
@@ -75,9 +78,9 @@ The base voice. Plain, answer first, full thoughts welcome, zero fuss.
 >
 > …
 
-### `cte` 🧠 · `1,195 tokens` · **32% shorter**
+### Historical `cte` 🧠 · `1,195 tokens` · **32% shorter**
 
-The same voice at twelve. Short. Blunt. Fragments.
+This sample used the previous CTE rules.
 
 > **Redis = in-memory key-value store. Cache = you put stuff there before hitting the
 > slow thing.**
@@ -93,8 +96,8 @@ The same voice at twelve. Short. Blunt. Fragments.
 >
 > …
 
-Nothing was cut from the answer — all three cover TTLs, eviction, invalidation and the
-thundering herd. `cte` says it in a third fewer tokens. One reply each, though: the
+In this sample, all three cover TTLs, eviction, invalidation and the thundering herd.
+`cte` says it in a third fewer tokens. One reply each does not prove retention; the
 measured version is [further down](#does-it-actually-save-tokens).
 
 ---
@@ -111,7 +114,7 @@ the *next* prompt carries the rules.
 flowchart LR
     S(["session start"]) -->|"rules injected · once"| P["your prompt"]
     P --> A["the reply"]
-    A --> C{"tone check<br/>~1 ms, no model call"}
+    A --> C{"tone and shape check<br/>~1 ms, no model call"}
     C -->|"clean"| N["next prompt<br/>carries nothing"]
     C -->|"drifted"| R["next prompt carries<br/>the rules + the reason"]
     N --> P
@@ -123,7 +126,7 @@ flowchart LR
 | 1 | what's on port 3000? | `lsof -i :3000` | clean | nothing |
 | 2 | and kill it? | "Certainly! It's worth noting you could leverage…" | **drift** | rules + the reason |
 | 3 | thanks | "Anytime." | clean | nothing |
-| 4 | why did it bind twice? | *(a long, careful explanation)* | exempt — you asked *why* | nothing |
+| 4 | explain why it bound twice | *(a long, careful explanation)* | shape exempt; tone clean | nothing |
 
 The check is a scan of the text. No model call, no tokens, and nothing of it appears
 in your transcript.
@@ -173,11 +176,13 @@ Claude Code also has a statusline badge. `off` hides it.
 
 ## The checker
 
-It scores **tone, not length.** A long, complete answer is fine; a fussy one is not.
+It scores **tone and shape, not total reply length.** A long, complete answer is fine;
+a fussy one is not.
 Each hit is a point, and the mode's threshold decides when the points mean drift.
 
-It stands down when the reply was *meant* to be long — you asked for detail, a
-walkthrough, a plan or a doc; the reply is mostly code; the turn was a plan.
+For detail, walkthroughs, plans and docs, it skips only sentence and prose-wall checks.
+It still catches filler and corporate language. It fully stands down for code-heavy
+replies and plan mode.
 
 It will not nag. There is no cap, because a cap that runs out stops correcting a model
 that is still drifting. There is a threshold instead. Past it, corrections come four
@@ -220,7 +225,7 @@ eightfold. No benchmark for your model, no figure at all.
 
 ## The side effect: does it save tokens?
 
-Yes, on the prose. Median of **5 rounds** per cell, 3-turn sessions, `node bench/run.mjs
+Historical only: median of **5 rounds** per cell, 3-turn sessions, `node bench/run.mjs
 --repeat 5` — Claude through `claude -p`, GPT through `codex exec` at pinned `medium`
 reasoning. 135 sessions, 405 calls. Raw per-run JSON is in
 [`bench/results/`](./bench/results):
@@ -239,9 +244,8 @@ reasoning. 135 sessions, 405 calls. Raw per-run JSON is in
 
 Higher is shorter. Negative means the replies got longer.
 
-**Every model gains under one mode or the other — but not the same one, and it is not
-guessable.** Opus wants `normal` and Sonnet wants `cte`, though `cte` is the more extreme
-voice. Picking wrong costs Opus 8 points and Sonnet 22.
+These historic results do not predict the rewritten prompts. Re-run before choosing a
+mode based on token savings.
 
 Codex bills reasoning as output and these figures sum both. No response rule governs how
 long a model thinks, so where the two diverge the visible-reply cut is the honest one —
@@ -266,7 +270,7 @@ What it costs:
 | Settings edits | One line for the badge, on Claude Code. The hooks come from the plugin |
 | Time | Two node starts per turn, ~135 ms, nearly all of it interpreter startup |
 | Accuracy | The checker is a heuristic. It will sometimes be wrong |
-| Savings | Nil or negative on anything but Opus or Sonnet — check your own model first |
+| Savings | Vary by model and mode — check your own model first |
 
 → **[The honest downsides, in full](./docs/tradeoffs.md)**
 
@@ -278,7 +282,7 @@ What it costs:
 |---|---|
 | `SessionStart` | Injects the mode's rules — once |
 | `UserPromptSubmit` | Injects **nothing**, unless drift was flagged or you switched mode |
-| `Stop` | Scores the reply, records the verdict, prints nothing, never blocks |
+| `Stop` | Scores the reply, records the verdict, never blocks; Codex receives `{}` |
 
 Codex fires the same three events with near-identical payloads, so one set of scripts
 serves both tools. Each tool keeps its own mode and stats. Zero dependencies — Node,
