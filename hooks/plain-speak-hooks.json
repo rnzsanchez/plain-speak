@@ -7,6 +7,7 @@
           {
             "type": "command",
             "command": "node \"${CLAUDE_PLUGIN_ROOT}/src/hooks/session-start.js\"",
+            "statusMessage": "Loading Plain Speak mode",
             "commandWindows": "if (Get-Command node -ErrorAction SilentlyContinue) { node \"$env:CLAUDE_PLUGIN_ROOT\\src\\hooks\\session-start.js\" }",
             "timeout": 5
           }
@@ -19,6 +20,7 @@
           {
             "type": "command",
             "command": "node \"${CLAUDE_PLUGIN_ROOT}/src/hooks/prompt-submit.js\"",
+            "statusMessage": "Checking Plain Speak mode",
             "commandWindows": "if (Get-Command node -ErrorAction SilentlyContinue) { node \"$env:CLAUDE_PLUGIN_ROOT\\src\\hooks\\prompt-submit.js\" }",
             "timeout": 5
           }
@@ -31,6 +33,7 @@
           {
             "type": "command",
             "command": "node \"${CLAUDE_PLUGIN_ROOT}/src/hooks/stop.js\"",
+            "statusMessage": "Checking Plain Speak response style",
             "commandWindows": "if (Get-Command node -ErrorAction SilentlyContinue) { node \"$env:CLAUDE_PLUGIN_ROOT\\src\\hooks\\stop.js\" }",
             "timeout": 5
           }
