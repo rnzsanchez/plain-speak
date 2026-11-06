@@ -26,6 +26,8 @@ function sandbox({ settings, codex = true } = {}) {
     PLAIN_SPEAK_MODE,
     PLAIN_SPEAK_BENCH,
     PLAIN_SPEAK_TARGET,
+    PLAIN_SPEAK_BACKOFF_AFTER,
+    PLAIN_SPEAK_ESCALATE_AFTER,
     PLUGIN_ROOT,
     ...clean
   } = process.env;

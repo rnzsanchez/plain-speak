@@ -6,11 +6,12 @@ import os from 'node:os';
 import path from 'node:path';
 
 const root = path.join(import.meta.dirname, '..');
+const { PLAIN_SPEAK_BACKOFF_AFTER, PLAIN_SPEAK_ESCALATE_AFTER, ...baseEnv } = process.env;
 const hook = (name, input, env = {}) =>
   execFileSync('node', [path.join(root, 'src', 'hooks', name)], {
     input: JSON.stringify(input),
     encoding: 'utf8',
-    env: { ...process.env, ...env },
+    env: { ...baseEnv, ...env },
   });
 
 function sandbox() {

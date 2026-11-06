@@ -2,6 +2,9 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 
+delete process.env.PLAIN_SPEAK_BACKOFF_AFTER;
+delete process.env.PLAIN_SPEAK_ESCALATE_AFTER;
+
 const require = createRequire(import.meta.url);
 const { check } = require('../src/drift.js');
 const { shouldReinject, recordTurn, easedOff, cooldownFor } = require('../src/state.js');
