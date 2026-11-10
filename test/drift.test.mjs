@@ -2,8 +2,9 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 
-delete process.env.PLAIN_SPEAK_BACKOFF_AFTER;
-delete process.env.PLAIN_SPEAK_ESCALATE_AFTER;
+// The behaviour tests pin the thresholds they were written against; the defaults have their own test.
+process.env.PLAIN_SPEAK_BACKOFF_AFTER = '3';
+process.env.PLAIN_SPEAK_ESCALATE_AFTER = '2';
 
 const require = createRequire(import.meta.url);
 const { check } = require('../src/drift.js');
@@ -181,4 +182,17 @@ test('the streak counts consecutive drift and one clean turn clears it', () => {
 
   s = recordTurn(s, { drift: false });
   assert.equal(s.streak, 0, 'a clean turn is the evidence the correction landed');
+});
+
+test('defaults ease off from the first correction and escalate after 3 drifted turns', async () => {
+  const { execFileSync } = await import('node:child_process');
+  const { PLAIN_SPEAK_BACKOFF_AFTER, PLAIN_SPEAK_ESCALATE_AFTER, ...unpinned } = process.env;
+  const probe = `const s = require('./src/state.js');
+    console.log(JSON.stringify([s.easedOff({ injections: 0 }), s.escalating({ streak: 2 }), s.escalating({ streak: 3 })]));`;
+  const out = execFileSync('node', ['-e', probe], {
+    cwd: new URL('..', import.meta.url),
+    env: unpinned,
+    encoding: 'utf8',
+  });
+  assert.deepEqual(JSON.parse(out), [true, false, true]);
 });

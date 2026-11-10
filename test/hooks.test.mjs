@@ -11,7 +11,7 @@ const hook = (name, input, env = {}) =>
   execFileSync('node', [path.join(root, 'src', 'hooks', name)], {
     input: JSON.stringify(input),
     encoding: 'utf8',
-    env: { ...baseEnv, ...env },
+    env: { ...baseEnv, PLAIN_SPEAK_BACKOFF_AFTER: '3', PLAIN_SPEAK_ESCALATE_AFTER: '2', ...env },
   });
 
 function sandbox() {

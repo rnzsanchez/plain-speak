@@ -32,7 +32,13 @@ function sandbox({ settings, codex = true } = {}) {
     ...clean
   } = process.env;
   return {
-    env: { ...clean, CLAUDE_CONFIG_DIR: claudeDir, CODEX_HOME: codexHome },
+    env: {
+      ...clean,
+      PLAIN_SPEAK_BACKOFF_AFTER: '3',
+      PLAIN_SPEAK_ESCALATE_AFTER: '2',
+      CLAUDE_CONFIG_DIR: claudeDir,
+      CODEX_HOME: codexHome,
+    },
     claudeDir,
     codexHome,
   };

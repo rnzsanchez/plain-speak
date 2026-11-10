@@ -16,7 +16,7 @@ const ALIASES = { default: 'normal', max: 'cte', on: 'normal' };
 // wait several turns and send a one-line nudge instead of the whole ruleset. Repeated
 // drift usually means the context has grown large, and hammering a big context with
 // more context is the wrong answer.
-const BACKOFF_AFTER = Number(process.env.PLAIN_SPEAK_BACKOFF_AFTER || 3);
+const BACKOFF_AFTER = Number(process.env.PLAIN_SPEAK_BACKOFF_AFTER || 0);
 const COOLDOWN_TURNS = 1;
 const EASED_COOLDOWN_TURNS = 4;
 // Backing off is right when the nudges are landing and the drift is occasional. It is
@@ -24,7 +24,7 @@ const EASED_COOLDOWN_TURNS = 4;
 // message is too weak, and answering it with a longer gap and a shorter message makes
 // it worse. `streak` counts consecutive drifted turns, so the two cases are told apart
 // rather than both being read as "stop nagging".
-const ESCALATE_AFTER = Number(process.env.PLAIN_SPEAK_ESCALATE_AFTER || 2);
+const ESCALATE_AFTER = Number(process.env.PLAIN_SPEAK_ESCALATE_AFTER || 3);
 const streakOf = (session) => session.streak || 0;
 const escalating = (session) => streakOf(session) >= ESCALATE_AFTER;
 // Past the threshold plain-speak stops being aggressive: longer gap, shorter nudge —
